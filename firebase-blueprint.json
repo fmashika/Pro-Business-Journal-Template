@@ -1,0 +1,294 @@
+{
+  "entities": {
+    "UserProfile": {
+      "title": "User Profile",
+      "description": "Private authenticated user profile information.",
+      "type": "object",
+      "properties": {
+        "userId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$",
+          "description": "Authenticated user UID."
+        },
+        "displayName": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 100,
+          "description": "User display name."
+        },
+        "email": {
+          "type": "string",
+          "format": "email",
+          "maxLength": 150,
+          "description": "User email address."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server creation timestamp."
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server update timestamp."
+        }
+      },
+      "required": ["userId", "displayName", "email", "createdAt", "updatedAt"]
+    },
+    "UserPreferences": {
+      "title": "User Preferences",
+      "description": "Dual-currency exchange rate, display settings, and financial targets.",
+      "type": "object",
+      "properties": {
+        "userId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "businessName": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 100
+        },
+        "exchangeRateTzsPerUsd": {
+          "type": "number",
+          "description": "Current exchange rate in TZS per 1 USD."
+        },
+        "displayCurrency": {
+          "type": "string",
+          "enum": ["USD", "TZS", "BOTH"]
+        },
+        "monthlySavingsGoalUsd": {
+          "type": "number",
+          "description": "Monthly savings target normalized in USD."
+        },
+        "emergencyTargetMonths": {
+          "type": "number",
+          "description": "Target emergency runway in months of spending."
+        },
+        "titheRatePercent": {
+          "type": "number",
+          "description": "Tithe percentage of gross gains (default 10)."
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "userId",
+        "businessName",
+        "exchangeRateTzsPerUsd",
+        "displayCurrency",
+        "monthlySavingsGoalUsd",
+        "emergencyTargetMonths",
+        "titheRatePercent",
+        "updatedAt"
+      ]
+    },
+    "JournalEntry": {
+      "title": "Journal Entry",
+      "description": "A day-to-day business or stewardship financial transaction in USD or TZS.",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "userId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "date": {
+          "type": "string",
+          "minLength": 10,
+          "maxLength": 10,
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+        },
+        "monthKey": {
+          "type": "string",
+          "minLength": 7,
+          "maxLength": 7,
+          "pattern": "^\\d{4}-\\d{2}$"
+        },
+        "type": {
+          "type": "string",
+          "enum": ["income", "spending", "saving", "emergency", "investment", "debt", "tithe", "offering"]
+        },
+        "emergencyAction": {
+          "type": "string",
+          "enum": ["fund", "use"]
+        },
+        "title": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 140
+        },
+        "category": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 60
+        },
+        "counterparty": {
+          "type": "string",
+          "maxLength": 100
+        },
+        "account": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 60
+        },
+        "currency": {
+          "type": "string",
+          "enum": ["USD", "TZS"]
+        },
+        "amount": {
+          "type": "number"
+        },
+        "exchangeRate": {
+          "type": "number"
+        },
+        "amountUSD": {
+          "type": "number"
+        },
+        "amountTZS": {
+          "type": "number"
+        },
+        "debtId": {
+          "type": "string",
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "notes": {
+          "type": "string",
+          "maxLength": 500
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "id",
+        "userId",
+        "date",
+        "monthKey",
+        "type",
+        "title",
+        "category",
+        "counterparty",
+        "account",
+        "currency",
+        "amount",
+        "exchangeRate",
+        "amountUSD",
+        "amountTZS",
+        "notes",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "DebtAccount": {
+      "title": "Debt Account",
+      "description": "Tracked business or personal debt with repayment milestone progress.",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "userId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "creditor": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 120
+        },
+        "purpose": {
+          "type": "string",
+          "maxLength": 140
+        },
+        "currency": {
+          "type": "string",
+          "enum": ["USD", "TZS"]
+        },
+        "totalPrincipal": {
+          "type": "number"
+        },
+        "amountPaid": {
+          "type": "number"
+        },
+        "exchangeRate": {
+          "type": "number"
+        },
+        "dueDate": {
+          "type": "string",
+          "minLength": 10,
+          "maxLength": 10,
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+        },
+        "status": {
+          "type": "string",
+          "enum": ["active", "paid_off"]
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "id",
+        "userId",
+        "creditor",
+        "purpose",
+        "currency",
+        "totalPrincipal",
+        "amountPaid",
+        "exchangeRate",
+        "dueDate",
+        "status",
+        "createdAt",
+        "updatedAt"
+      ]
+    }
+  },
+  "firestore": {
+    "/users/{userId}/private/profile": {
+      "schema": { "$ref": "#/entities/UserProfile" },
+      "description": "Isolated private PII profile document for the authenticated owner."
+    },
+    "/users/{userId}/settings/preferences": {
+      "schema": { "$ref": "#/entities/UserPreferences" },
+      "description": "User preferences for USD/TZS exchange rate, currency display, and financial targets."
+    },
+    "/users/{userId}/entries/{entryId}": {
+      "schema": { "$ref": "#/entities/JournalEntry" },
+      "description": "Day-to-day financial journal entries covering business income, spending, savings, emergency uses/funds, investments, debt repayments, tithe, and offerings."
+    },
+    "/users/{userId}/debts/{debtId}": {
+      "schema": { "$ref": "#/entities/DebtAccount" },
+      "description": "Debt accounts and repayment milestone trackers owned by the user."
+    }
+  }
+}

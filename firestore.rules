@@ -1,0 +1,292 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // 1. Global Safety Net (Default Deny)
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // 2. Hardened Global Helpers
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isVerifiedUser() {
+      return isSignedIn() && request.auth.token.email_verified == true;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() >= 1 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    // 3. Entity Validation Blueprints (Static validation only, no DB reads)
+    function isValidUserProfile(data, userId) {
+      return data.keys().hasAll(['userId', 'displayName', 'email', 'createdAt', 'updatedAt'])
+        && data.keys().hasOnly(['userId', 'displayName', 'email', 'createdAt', 'updatedAt'])
+        && data.userId == userId
+        && data.userId == request.auth.uid
+        && data.displayName is string && data.displayName.size() >= 1 && data.displayName.size() <= 100
+        && data.email is string && data.email.size() >= 3 && data.email.size() <= 150
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidUserPreferences(data, userId) {
+      return data.keys().hasAll([
+          'userId',
+          'businessName',
+          'exchangeRateTzsPerUsd',
+          'displayCurrency',
+          'monthlySavingsGoalUsd',
+          'emergencyTargetMonths',
+          'titheRatePercent',
+          'updatedAt'
+        ])
+        && data.keys().hasOnly([
+          'userId',
+          'businessName',
+          'exchangeRateTzsPerUsd',
+          'displayCurrency',
+          'monthlySavingsGoalUsd',
+          'emergencyTargetMonths',
+          'titheRatePercent',
+          'updatedAt'
+        ])
+        && data.userId == userId
+        && data.userId == request.auth.uid
+        && data.businessName is string && data.businessName.size() >= 1 && data.businessName.size() <= 100
+        && (data.exchangeRateTzsPerUsd is int || data.exchangeRateTzsPerUsd is float)
+        && data.exchangeRateTzsPerUsd > 0 && data.exchangeRateTzsPerUsd <= 100000
+        && data.displayCurrency in ['USD', 'TZS', 'BOTH']
+        && (data.monthlySavingsGoalUsd is int || data.monthlySavingsGoalUsd is float)
+        && data.monthlySavingsGoalUsd >= 0 && data.monthlySavingsGoalUsd <= 100000000
+        && (data.emergencyTargetMonths is int || data.emergencyTargetMonths is float)
+        && data.emergencyTargetMonths >= 1 && data.emergencyTargetMonths <= 24
+        && (data.titheRatePercent is int || data.titheRatePercent is float)
+        && data.titheRatePercent >= 0 && data.titheRatePercent <= 100
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidJournalEntry(data, userId, entryId) {
+      let hasRequired = data.keys().hasAll([
+        'id',
+        'userId',
+        'date',
+        'monthKey',
+        'type',
+        'title',
+        'category',
+        'counterparty',
+        'account',
+        'currency',
+        'amount',
+        'exchangeRate',
+        'amountUSD',
+        'amountTZS',
+        'notes',
+        'createdAt',
+        'updatedAt'
+      ]);
+      let hasAllowedOnly = data.keys().hasOnly([
+        'id',
+        'userId',
+        'date',
+        'monthKey',
+        'type',
+        'emergencyAction',
+        'title',
+        'category',
+        'counterparty',
+        'account',
+        'currency',
+        'amount',
+        'exchangeRate',
+        'amountUSD',
+        'amountTZS',
+        'debtId',
+        'notes',
+        'createdAt',
+        'updatedAt'
+      ]);
+      let validEmergencyAction = (data.type == 'emergency'
+        && ('emergencyAction' in data)
+        && data.emergencyAction in ['fund', 'use'])
+        || (data.type != 'emergency' && !('emergencyAction' in data));
+      let validDebtIdField = !('debtId' in data)
+        || (isValidId(data.debtId) && data.type == 'debt');
+
+      return hasRequired
+        && hasAllowedOnly
+        && data.id == entryId
+        && data.userId == userId
+        && data.userId == request.auth.uid
+        && data.date is string && data.date.size() == 10 && data.date.matches('^\\d{4}-\\d{2}-\\d{2}$')
+        && data.monthKey is string && data.monthKey.size() == 7 && data.monthKey.matches('^\\d{4}-\\d{2}$')
+        && data.type in ['income', 'spending', 'saving', 'emergency', 'investment', 'debt', 'tithe', 'offering']
+        && validEmergencyAction
+        && validDebtIdField
+        && data.title is string && data.title.size() >= 1 && data.title.size() <= 140
+        && data.category is string && data.category.size() >= 1 && data.category.size() <= 60
+        && data.counterparty is string && data.counterparty.size() <= 100
+        && data.account is string && data.account.size() >= 1 && data.account.size() <= 60
+        && data.currency in ['USD', 'TZS']
+        && (data.amount is int || data.amount is float) && data.amount > 0 && data.amount <= 1000000000000
+        && (data.exchangeRate is int || data.exchangeRate is float) && data.exchangeRate > 0 && data.exchangeRate <= 100000
+        && (data.amountUSD is int || data.amountUSD is float) && data.amountUSD >= 0 && data.amountUSD <= 1000000000
+        && (data.amountTZS is int || data.amountTZS is float) && data.amountTZS >= 0 && data.amountTZS <= 1000000000000
+        && data.notes is string && data.notes.size() <= 500
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidDebtAccount(data, userId, debtId) {
+      return data.keys().hasAll([
+          'id',
+          'userId',
+          'creditor',
+          'purpose',
+          'currency',
+          'totalPrincipal',
+          'amountPaid',
+          'exchangeRate',
+          'dueDate',
+          'status',
+          'createdAt',
+          'updatedAt'
+        ])
+        && data.keys().hasOnly([
+          'id',
+          'userId',
+          'creditor',
+          'purpose',
+          'currency',
+          'totalPrincipal',
+          'amountPaid',
+          'exchangeRate',
+          'dueDate',
+          'status',
+          'createdAt',
+          'updatedAt'
+        ])
+        && data.id == debtId
+        && data.userId == userId
+        && data.userId == request.auth.uid
+        && data.creditor is string && data.creditor.size() >= 1 && data.creditor.size() <= 120
+        && data.purpose is string && data.purpose.size() <= 140
+        && data.currency in ['USD', 'TZS']
+        && (data.totalPrincipal is int || data.totalPrincipal is float) && data.totalPrincipal > 0 && data.totalPrincipal <= 1000000000000
+        && (data.amountPaid is int || data.amountPaid is float) && data.amountPaid >= 0 && data.amountPaid <= data.totalPrincipal
+        && (data.exchangeRate is int || data.exchangeRate is float) && data.exchangeRate > 0 && data.exchangeRate <= 100000
+        && data.dueDate is string && data.dueDate.size() == 10 && data.dueDate.matches('^\\d{4}-\\d{2}-\\d{2}$')
+        && data.status in ['active', 'paid_off']
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    // 4. Collection Rules
+    match /users/{userId}/private/profile {
+      allow get: if isOwner(userId) && isVerifiedUser() && isValidId(userId);
+      allow create: if isOwner(userId) && isVerifiedUser() && isValidId(userId)
+        && isValidUserProfile(incoming(), userId)
+        && incoming().createdAt == request.time
+        && incoming().updatedAt == request.time;
+      allow update: if isOwner(userId) && isVerifiedUser() && isValidId(userId)
+        && isValidUserProfile(incoming(), userId)
+        && incoming().userId == existing().userId
+        && incoming().createdAt == existing().createdAt
+        && incoming().updatedAt == request.time
+        && incoming().diff(existing()).affectedKeys().hasOnly(['displayName', 'email', 'updatedAt']);
+      allow delete: if isOwner(userId) && isVerifiedUser() && isValidId(userId);
+    }
+
+    match /users/{userId}/settings/preferences {
+      allow get: if isOwner(userId) && isVerifiedUser() && isValidId(userId);
+      allow create: if isOwner(userId) && isVerifiedUser() && isValidId(userId)
+        && isValidUserPreferences(incoming(), userId)
+        && incoming().updatedAt == request.time;
+      allow update: if isOwner(userId) && isVerifiedUser() && isValidId(userId)
+        && isValidUserPreferences(incoming(), userId)
+        && incoming().userId == existing().userId
+        && incoming().updatedAt == request.time
+        && incoming().diff(existing()).affectedKeys().hasOnly([
+          'businessName',
+          'exchangeRateTzsPerUsd',
+          'displayCurrency',
+          'monthlySavingsGoalUsd',
+          'emergencyTargetMonths',
+          'titheRatePercent',
+          'updatedAt'
+        ]);
+      allow delete: if isOwner(userId) && isVerifiedUser() && isValidId(userId);
+    }
+
+    match /users/{userId}/entries/{entryId} {
+      allow get: if isOwner(userId) && isVerifiedUser() && isValidId(userId) && isValidId(entryId);
+      allow list: if isOwner(userId) && isVerifiedUser() && resource.data.userId == request.auth.uid;
+      allow create: if isOwner(userId) && isVerifiedUser() && isValidId(userId) && isValidId(entryId)
+        && isValidJournalEntry(incoming(), userId, entryId)
+        && incoming().createdAt == request.time
+        && incoming().updatedAt == request.time
+        && (!('debtId' in incoming()) || exists(/databases/$(database)/documents/users/$(userId)/debts/$(incoming().debtId)));
+      allow update: if isOwner(userId) && isVerifiedUser() && isValidId(userId) && isValidId(entryId)
+        && isValidJournalEntry(incoming(), userId, entryId)
+        && incoming().id == existing().id
+        && incoming().userId == existing().userId
+        && incoming().createdAt == existing().createdAt
+        && incoming().updatedAt == request.time
+        && (!('debtId' in incoming()) || exists(/databases/$(database)/documents/users/$(userId)/debts/$(incoming().debtId)))
+        && incoming().diff(existing()).affectedKeys().hasOnly([
+          'date',
+          'monthKey',
+          'type',
+          'emergencyAction',
+          'title',
+          'category',
+          'counterparty',
+          'account',
+          'currency',
+          'amount',
+          'exchangeRate',
+          'amountUSD',
+          'amountTZS',
+          'debtId',
+          'notes',
+          'updatedAt'
+        ]);
+      allow delete: if isOwner(userId) && isVerifiedUser() && isValidId(userId) && isValidId(entryId);
+    }
+
+    match /users/{userId}/debts/{debtId} {
+      allow get: if isOwner(userId) && isVerifiedUser() && isValidId(userId) && isValidId(debtId);
+      allow list: if isOwner(userId) && isVerifiedUser() && resource.data.userId == request.auth.uid;
+      allow create: if isOwner(userId) && isVerifiedUser() && isValidId(userId) && isValidId(debtId)
+        && isValidDebtAccount(incoming(), userId, debtId)
+        && incoming().createdAt == request.time
+        && incoming().updatedAt == request.time;
+      allow update: if isOwner(userId) && isVerifiedUser() && isValidId(userId) && isValidId(debtId)
+        && isValidDebtAccount(incoming(), userId, debtId)
+        && incoming().id == existing().id
+        && incoming().userId == existing().userId
+        && incoming().createdAt == existing().createdAt
+        && incoming().updatedAt == request.time
+        && (
+          (existing().status != 'paid_off' && incoming().diff(existing()).affectedKeys().hasOnly(['amountPaid', 'status', 'updatedAt']))
+          ||
+          (existing().status != 'paid_off' && incoming().diff(existing()).affectedKeys().hasOnly(['creditor', 'purpose', 'dueDate', 'totalPrincipal', 'status', 'updatedAt']))
+        );
+      allow delete: if isOwner(userId) && isVerifiedUser() && isValidId(userId) && isValidId(debtId);
+    }
+  }
+}

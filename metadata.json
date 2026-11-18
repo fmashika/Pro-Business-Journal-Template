@@ -1,0 +1,6 @@
+{
+  "name": "Amani Ledger",
+  "description": "Day-to-day dual-currency (USD & TZS) business and personal financial journal tracking cash flow patterns, monthly summaries, savings, emergency uses, investments, debt milestones, 10% tithe, and offerings.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
