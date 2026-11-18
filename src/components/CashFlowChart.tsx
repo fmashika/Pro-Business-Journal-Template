@@ -61,7 +61,7 @@ export const CashFlowChart: React.FC<CashFlowChartProps> = ({ series, displayMod
   return (
     <div className="space-y-3">
       <div className="flex flex-wrap items-center justify-between gap-4">
-        <div className="flex flex-wrap items-center gap-5 text-xs text-slate-600">
+        <div className="flex flex-wrap items-center gap-5 text-xs text-slate-600 dark:text-slate-400">
           <span className="inline-flex items-center gap-2">
             <span className="w-2.5 h-2.5 rounded-xs bg-emerald-600 inline-block" />
             Daily Inflows (Money Gained)
@@ -71,12 +71,12 @@ export const CashFlowChart: React.FC<CashFlowChartProps> = ({ series, displayMod
             Daily Outflows (Spend, Debt, Uses, Giving)
           </span>
           <span className="inline-flex items-center gap-2">
-            <span className="w-4 h-0.5 bg-slate-900 inline-block" />
+            <span className="w-4 h-0.5 bg-slate-900 dark:bg-slate-100 inline-block" />
             Cumulative Net Trend
           </span>
         </div>
 
-        <div className="text-xs font-mono tabular-nums text-slate-700 min-h-[20px]">
+        <div className="text-xs font-mono tabular-nums text-slate-700 dark:text-slate-300 min-h-[20px]">
           {hovered ? (
             <span>
               Day {hovered.dayNumber} ({hovered.date}) · In:{' '}
@@ -87,7 +87,9 @@ export const CashFlowChart: React.FC<CashFlowChartProps> = ({ series, displayMod
                 : formatUSD(hovered.cumulativeNetUSD)}
             </span>
           ) : (
-            <span className="text-slate-400">Hover any day bar to inspect daily cash flow</span>
+            <span className="text-slate-400 dark:text-slate-500">
+              Hover any day bar to inspect daily cash flow
+            </span>
           )}
         </div>
       </div>
@@ -110,7 +112,7 @@ export const CashFlowChart: React.FC<CashFlowChartProps> = ({ series, displayMod
                   y1={y}
                   x2={width - padRight}
                   y2={y}
-                  stroke="#E2E8F0"
+                  className="stroke-slate-200 dark:stroke-slate-800"
                   strokeWidth="1"
                   strokeDasharray={ratio === 0 ? undefined : '3 3'}
                 />
@@ -118,7 +120,7 @@ export const CashFlowChart: React.FC<CashFlowChartProps> = ({ series, displayMod
                   x={padLeft - 8}
                   y={y + 3.5}
                   textAnchor="end"
-                  className="fill-slate-400 text-[10px] font-mono"
+                  className="fill-slate-400 dark:fill-slate-500 text-[10px] font-mono"
                 >
                   {formatAxisTick(tickVal)}
                 </text>
@@ -147,7 +149,7 @@ export const CashFlowChart: React.FC<CashFlowChartProps> = ({ series, displayMod
                   y={padTop}
                   width={slotW}
                   height={plotH}
-                  fill={isHovered ? '#F1F5F9' : 'transparent'}
+                  className={isHovered ? 'fill-slate-100 dark:fill-slate-800/80' : 'fill-transparent'}
                 />
                 {inVal > 0 && (
                   <rect
@@ -176,7 +178,7 @@ export const CashFlowChart: React.FC<CashFlowChartProps> = ({ series, displayMod
                     x={centerX}
                     y={height - 8}
                     textAnchor="middle"
-                    className="fill-slate-500 text-[10px] font-mono"
+                    className="fill-slate-500 dark:fill-slate-400 text-[10px] font-mono"
                   >
                     {p.dayNumber}
                   </text>
@@ -189,12 +191,11 @@ export const CashFlowChart: React.FC<CashFlowChartProps> = ({ series, displayMod
           {series.length > 1 && (
             <polyline
               fill="none"
-              stroke="#0F172A"
+              className="stroke-slate-900 dark:stroke-slate-100 pointer-events-none"
               strokeWidth="2"
               strokeLinejoin="round"
               strokeLinecap="round"
               points={cumLinePoints}
-              className="pointer-events-none"
             />
           )}
         </svg>

@@ -78,22 +78,53 @@ export interface EntryTypeMeta {
   defaultCategories: string[];
 }
 
+export const FINANCIAL_MARKET_CATEGORIES = [
+  'Crypto Trading',
+  'Stock Market / Equities',
+  'Forex Trading',
+  'Commodities & Metals',
+  'Indices & ETFs',
+  'Options & Derivatives',
+  'Futures & CFDs',
+  'Bonds & Treasury Bills',
+  'UTT AMIS / Mutual Funds',
+  'Money Market & REITs',
+];
+
 export const ENTRY_TYPE_META: Record<EntryType, EntryTypeMeta> = {
   income: {
     type: 'income',
     label: 'Business Income / Gain',
     shortLabel: 'Income',
     direction: 'inflow',
-    description: 'Sales, client retainers, services, or revenue gained (accrues 10% tithe).',
-    defaultCategories: ['Client Sales', 'Product Revenue', 'Consulting', 'Commission', 'Dividend / Return', 'Other Gain'],
+    description: 'Sales, client retainers, trading profits, or revenue gained (accrues 10% tithe).',
+    defaultCategories: [
+      'Client Sales',
+      'Product Revenue',
+      'Consulting',
+      'Commission',
+      'Trading Profit / Gain',
+      'Dividend / Yield',
+      'Other Gain',
+    ],
   },
   spending: {
     type: 'spending',
     label: 'Operating & Living Spending',
     shortLabel: 'Spending',
     direction: 'outflow',
-    description: 'Daily business expenses, inventory, rent, utilities, transport, and personal spending.',
-    defaultCategories: ['Inventory & Stock', 'Rent & Utilities', 'Transport & Fuel', 'Staff & Labor', 'Marketing', 'Supplies & Ops', 'Living & Meals'],
+    description: 'Daily business expenses, inventory, rent, utilities, broker fees, and personal spending.',
+    defaultCategories: [
+      'Inventory & Stock',
+      'Rent & Utilities',
+      'Transport & Fuel',
+      'Staff & Labor',
+      'Marketing',
+      'Supplies & Ops',
+      'Broker & Exchange Fees',
+      'Trading Loss / Drawdown',
+      'Living & Meals',
+    ],
   },
   saving: {
     type: 'saving',
@@ -113,11 +144,15 @@ export const ENTRY_TYPE_META: Record<EntryType, EntryTypeMeta> = {
   },
   investment: {
     type: 'investment',
-    label: 'Investment & Growth',
+    label: 'Investment & Financial Markets',
     shortLabel: 'Investment',
     direction: 'allocation',
-    description: 'Capital deployed into treasury bills, mutual funds, stocks, or business expansion.',
-    defaultCategories: ['UTT AMIS / Funds', 'Treasury Bills', 'Business Expansion', 'Equities / Bonds', 'Real Estate'],
+    description: 'Capital deployed into crypto, stocks, forex, commodities, ETFs, funds, or expansion.',
+    defaultCategories: [
+      ...FINANCIAL_MARKET_CATEGORIES,
+      'Business Expansion',
+      'Real Estate',
+    ],
   },
   debt: {
     type: 'debt',

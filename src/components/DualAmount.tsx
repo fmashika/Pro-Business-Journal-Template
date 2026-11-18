@@ -17,8 +17,8 @@ export const DualAmount: React.FC<DualAmountProps> = ({
   tzs,
   mode,
   prefix = '',
-  className = 'text-slate-900 font-semibold',
-  secondaryClassName = 'text-xs text-slate-500',
+  className = 'text-slate-900 dark:text-slate-100 font-semibold',
+  secondaryClassName = 'text-xs text-slate-500 dark:text-slate-400',
   align = 'left',
 }) => {
   const formatted = formatByMode(usd, tzs, mode);

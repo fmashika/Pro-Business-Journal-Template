@@ -20,17 +20,22 @@ import {
   ChevronRight,
   HeartHandshake,
   LayoutDashboard,
+  Lock,
+  LogIn,
   LogOut,
   Menu,
+  Moon,
   Plus,
   Settings,
   ShieldCheck,
+  Sun,
   X,
 } from 'lucide-react';
 import { DailyJournalView } from './components/DailyJournalView';
 import { DebtModal } from './components/DebtModal';
 import { EntryModal } from './components/EntryModal';
 import { ErrorBoundary } from './components/ErrorBoundary';
+import { GuestUpgradeModal } from './components/GuestUpgradeModal';
 import { OverviewView } from './components/OverviewView';
 import { ReservesDebtView } from './components/ReservesDebtView';
 import { SettingsView } from './components/SettingsView';
@@ -50,6 +55,7 @@ import {
   db,
   handleFirestoreError,
   OperationType,
+  signInWithGoogle,
   signOutUser,
   testConnection,
 } from './lib/firebase';
@@ -88,9 +94,31 @@ function makeId(prefix: string): string {
 
 function MainWorkspace() {
   const [user, setUser] = useState<User | null>(null);
+  const [isGuest, setIsGuest] = useState(false);
+  const [guestPromptAction, setGuestPromptAction] = useState<string | null>(null);
   const [authReady, setAuthReady] = useState(false);
   const [loadingData, setLoadingData] = useState(true);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [theme, setTheme] = useState<'light' | 'dark'>(() => {
+    try {
+      return localStorage.getItem('pro_journal_theme') === 'dark' ? 'dark' : 'light';
+    } catch {
+      return 'light';
+    }
+  });
+
+  useEffect(() => {
+    document.documentElement.classList.toggle('dark', theme === 'dark');
+    try {
+      localStorage.setItem('pro_journal_theme', theme);
+    } catch {
+      // Ignore storage failures in restricted contexts
+    }
+  }, [theme]);
+
+  const toggleTheme = () => {
+    setTheme((prev) => (prev === 'dark' ? 'light' : 'dark'));
+  };
 
   const todayStr = getTodayDateString();
   const [activeTab, setActiveTab] = useState<NavTab>('overview');
@@ -128,7 +156,10 @@ function MainWorkspace() {
     const unsub = onAuthStateChanged(auth, (u) => {
       setUser(u);
       setAuthReady(true);
-      if (!u) {
+      if (u) {
+        setIsGuest(false);
+        setGuestPromptAction(null);
+      } else {
         setEntries([]);
         setDebts([]);
         setLoadingData(false);
@@ -136,6 +167,39 @@ function MainWorkspace() {
     });
     return () => unsub();
   }, []);
+
+  const handleEnterGuest = () => {
+    const curMonth = todayStr.slice(0, 7);
+    const prevMonth = shiftMonthKey(curMonth, -1);
+    const bundle = buildSampleSeedBundle(curMonth, prevMonth, 2650);
+    setEntries(bundle.entries.map((e) => ({ ...e, userId: 'guest' })));
+    setDebts(bundle.debts.map((d) => ({ ...d, userId: 'guest' })));
+    setPreferences({
+      userId: 'guest',
+      businessName: 'Pro Business Journal Template',
+      exchangeRateTzsPerUsd: 2650,
+      displayCurrency: 'BOTH',
+      monthlySavingsGoalUsd: 500,
+      emergencyTargetMonths: 3,
+      titheRatePercent: 10,
+    });
+    setDisplayMode('BOTH');
+    setMonthKey(curMonth);
+    setActiveTab('overview');
+    setIsGuest(true);
+    setLoadingData(false);
+  };
+
+  const handleExitGuest = () => {
+    setIsGuest(false);
+    setEntries([]);
+    setDebts([]);
+    setGuestPromptAction(null);
+  };
+
+  const handleGuestSignIn = async () => {
+    await signInWithGoogle();
+  };
 
   useEffect(() => {
     if (!authReady || !user) return;
@@ -274,6 +338,10 @@ function MainWorkspace() {
     emergencyPreset?: EmergencyAction,
     debtIdPreset?: string
   ) => {
+    if (isGuest || !user) {
+      setGuestPromptAction('record a new transaction');
+      return;
+    }
     setEditingEntry(null);
     setPresetType(typePreset);
     setPresetAmountUsd(amountUsdPreset);
@@ -283,6 +351,10 @@ function MainWorkspace() {
   };
 
   const openEditEntry = (entry: JournalEntry) => {
+    if (isGuest || !user) {
+      setGuestPromptAction('edit this journal entry');
+      return;
+    }
     setEditingEntry(entry);
     setPresetType(undefined);
     setPresetAmountUsd(undefined);
@@ -408,7 +480,10 @@ function MainWorkspace() {
   };
 
   const handleDeleteEntry = async (entry: JournalEntry) => {
-    if (!user) return;
+    if (isGuest || !user) {
+      setGuestPromptAction('delete this journal entry');
+      return;
+    }
     const uid = user.uid;
     try {
       await deleteDoc(doc(db, 'users', uid, 'entries', entry.id));
@@ -425,7 +500,10 @@ function MainWorkspace() {
     amountPaid: number;
     dueDate: string;
   }) => {
-    if (!user) return;
+    if (isGuest || !user) {
+      setGuestPromptAction('add a debt account');
+      return;
+    }
     const uid = user.uid;
     const debtId = makeId('debt');
     const status = payload.amountPaid >= payload.totalPrincipal ? 'paid_off' : 'active';
@@ -450,7 +528,10 @@ function MainWorkspace() {
   };
 
   const handleDeleteDebt = async (debtId: string) => {
-    if (!user) return;
+    if (isGuest || !user) {
+      setGuestPromptAction('delete a debt account');
+      return;
+    }
     const uid = user.uid;
     try {
       await deleteDoc(doc(db, 'users', uid, 'debts', debtId));
@@ -462,7 +543,10 @@ function MainWorkspace() {
   const handleSavePreferences = async (
     next: Omit<UserPreferences, 'userId' | 'updatedAt'>
   ) => {
-    if (!user) return;
+    if (isGuest || !user) {
+      setGuestPromptAction('save journal settings');
+      return;
+    }
     const uid = user.uid;
     try {
       await updateDoc(doc(db, 'users', uid, 'settings', 'preferences'), {
@@ -475,7 +559,10 @@ function MainWorkspace() {
   };
 
   const handleLoadSampleData = async () => {
-    if (!user) return;
+    if (isGuest || !user) {
+      setGuestPromptAction('load sample data into a personal account');
+      return;
+    }
     setSeedingSample(true);
     const uid = user.uid;
     const bundle = buildSampleSeedBundle(
@@ -511,7 +598,10 @@ function MainWorkspace() {
   };
 
   const handleClearAllData = async () => {
-    if (!user) return;
+    if (isGuest || !user) {
+      setGuestPromptAction('clear journal records');
+      return;
+    }
     const uid = user.uid;
     try {
       const batch = writeBatch(db);
@@ -529,24 +619,32 @@ function MainWorkspace() {
 
   if (!authReady) {
     return (
-      <div className="min-h-screen bg-[#F8FAFC] flex items-center justify-center">
-        <div className="text-sm text-slate-500">Initializing Pro Business Journal Template...</div>
+      <div className="min-h-screen bg-[#F8FAFC] dark:bg-slate-950 flex items-center justify-center transition-colors">
+        <div className="text-sm text-slate-500 dark:text-slate-400">
+          Initializing Pro Business Journal Template...
+        </div>
       </div>
     );
   }
 
-  if (!user) {
-    return <SignInGate />;
+  if (!user && !isGuest) {
+    return (
+      <SignInGate
+        onEnterGuest={handleEnterGuest}
+        theme={theme}
+        onToggleTheme={toggleTheme}
+      />
+    );
   }
 
   const activeNavTitle = NAV_ITEMS.find((i) => i.key === activeTab)?.label || 'Overview';
 
   return (
-    <div className="min-h-screen bg-[#F8FAFC] text-slate-900 flex">
+    <div className="min-h-screen bg-[#F8FAFC] dark:bg-slate-950 text-slate-900 dark:text-slate-100 flex transition-colors">
       {/* Desktop Sidebar */}
-      <aside className="hidden lg:flex lg:flex-col lg:w-[272px] lg:shrink-0 bg-white border-r border-slate-200 sticky top-0 h-screen">
-        <div className="px-5 py-5 border-b border-slate-200">
-          <span className="font-display text-[15px] font-bold tracking-tight text-slate-900 whitespace-nowrap block truncate">
+      <aside className="hidden lg:flex lg:flex-col lg:w-[272px] lg:shrink-0 bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 sticky top-0 h-screen transition-colors">
+        <div className="px-5 py-5 border-b border-slate-200 dark:border-slate-800">
+          <span className="font-display text-[15px] font-bold tracking-tight text-slate-900 dark:text-slate-100 whitespace-nowrap block truncate">
             Pro Business Journal Template
           </span>
         </div>
@@ -562,8 +660,8 @@ function MainWorkspace() {
                 onClick={() => setActiveTab(item.key)}
                 className={`w-full flex items-center gap-3 px-3 py-2.5 text-sm font-medium rounded-lg transition-colors cursor-pointer whitespace-nowrap ${
                   active
-                    ? 'bg-slate-900 text-white'
-                    : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+                    ? 'bg-slate-900 dark:bg-emerald-700 text-white'
+                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-800'
                 }`}
               >
                 <Icon className="w-4 h-4 shrink-0" />
@@ -573,21 +671,53 @@ function MainWorkspace() {
           })}
         </nav>
 
-        <div className="p-4 border-t border-slate-200 space-y-3">
-          <div className="min-w-0">
-            <div className="text-xs font-semibold text-slate-900 truncate">
-              {user.displayName || 'Journal Owner'}
-            </div>
-            <div className="text-xs text-slate-500 truncate">{user.email}</div>
-          </div>
-          <button
-            type="button"
-            onClick={() => signOutUser()}
-            className="w-full inline-flex items-center justify-center gap-2 px-3 py-2 text-xs font-medium text-slate-700 bg-slate-100 rounded-lg hover:bg-slate-200 transition-colors cursor-pointer whitespace-nowrap"
-          >
-            <LogOut className="w-3.5 h-3.5" />
-            Sign Out
-          </button>
+        <div className="p-4 border-t border-slate-200 dark:border-slate-800 space-y-3">
+          {isGuest ? (
+            <>
+              <div className="min-w-0">
+                <div className="text-xs font-semibold text-slate-900 dark:text-slate-100">
+                  Guest Preview
+                </div>
+                <div className="text-xs text-slate-500 dark:text-slate-400">
+                  Read-only · No account
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={handleGuestSignIn}
+                className="w-full inline-flex items-center justify-center gap-2 px-3 py-2 text-xs font-semibold text-white bg-emerald-700 rounded-lg hover:bg-emerald-800 transition-colors cursor-pointer whitespace-nowrap"
+              >
+                <LogIn className="w-3.5 h-3.5" />
+                Start Saving Today!
+              </button>
+              <button
+                type="button"
+                onClick={handleExitGuest}
+                className="w-full inline-flex items-center justify-center gap-2 px-3 py-1.5 text-xs font-medium text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 transition-colors cursor-pointer whitespace-nowrap"
+              >
+                Exit Guest Preview
+              </button>
+            </>
+          ) : (
+            <>
+              <div className="min-w-0">
+                <div className="text-xs font-semibold text-slate-900 dark:text-slate-100 truncate">
+                  {user?.displayName || 'Journal Owner'}
+                </div>
+                <div className="text-xs text-slate-500 dark:text-slate-400 truncate">
+                  {user?.email}
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => signOutUser()}
+                className="w-full inline-flex items-center justify-center gap-2 px-3 py-2 text-xs font-medium text-slate-700 dark:text-slate-200 bg-slate-100 dark:bg-slate-800 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors cursor-pointer whitespace-nowrap"
+              >
+                <LogOut className="w-3.5 h-3.5" />
+                Sign Out
+              </button>
+            </>
+          )}
         </div>
       </aside>
 
@@ -595,19 +725,19 @@ function MainWorkspace() {
       {mobileMenuOpen && (
         <div className="fixed inset-0 z-50 lg:hidden flex">
           <div
-            className="fixed inset-0 bg-slate-900/40"
+            className="fixed inset-0 bg-slate-900/40 dark:bg-slate-950/70"
             onClick={() => setMobileMenuOpen(false)}
           />
-          <aside className="relative w-64 max-w-[80vw] bg-white h-full flex flex-col border-r border-slate-200 z-10">
-            <div className="px-5 py-4 border-b border-slate-200 flex items-center justify-between gap-2">
-              <span className="font-display text-[15px] font-bold text-slate-900 truncate">
+          <aside className="relative w-64 max-w-[80vw] bg-white dark:bg-slate-900 h-full flex flex-col border-r border-slate-200 dark:border-slate-800 z-10">
+            <div className="px-5 py-4 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between gap-2">
+              <span className="font-display text-[15px] font-bold text-slate-900 dark:text-slate-100 truncate">
                 Pro Business Journal Template
               </span>
               <button
                 type="button"
                 onClick={() => setMobileMenuOpen(false)}
                 aria-label="Close navigation"
-                className="p-1.5 text-slate-500 hover:text-slate-900 rounded-lg cursor-pointer"
+                className="p-1.5 text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 rounded-lg cursor-pointer"
               >
                 <X className="w-4 h-4" />
               </button>
@@ -626,8 +756,8 @@ function MainWorkspace() {
                     }}
                     className={`w-full flex items-center gap-3 px-3 py-2.5 text-sm font-medium rounded-lg transition-colors cursor-pointer whitespace-nowrap ${
                       active
-                        ? 'bg-slate-900 text-white'
-                        : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+                        ? 'bg-slate-900 dark:bg-emerald-700 text-white'
+                        : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-800'
                     }`}
                   >
                     <Icon className="w-4 h-4 shrink-0" />
@@ -636,15 +766,35 @@ function MainWorkspace() {
                 );
               })}
             </nav>
-            <div className="p-4 border-t border-slate-200">
-              <button
-                type="button"
-                onClick={() => signOutUser()}
-                className="w-full inline-flex items-center justify-center gap-2 px-3 py-2 text-xs font-medium text-slate-700 bg-slate-100 rounded-lg hover:bg-slate-200 cursor-pointer"
-              >
-                <LogOut className="w-3.5 h-3.5" />
-                Sign Out
-              </button>
+            <div className="p-4 border-t border-slate-200 dark:border-slate-800 space-y-2">
+              {isGuest ? (
+                <>
+                  <button
+                    type="button"
+                    onClick={handleGuestSignIn}
+                    className="w-full inline-flex items-center justify-center gap-2 px-3 py-2 text-xs font-semibold text-white bg-emerald-700 rounded-lg hover:bg-emerald-800 cursor-pointer"
+                  >
+                    <LogIn className="w-3.5 h-3.5" />
+                    Start Saving Today!
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleExitGuest}
+                    className="w-full inline-flex items-center justify-center gap-2 px-3 py-1.5 text-xs font-medium text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 cursor-pointer"
+                  >
+                    Exit Guest Preview
+                  </button>
+                </>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => signOutUser()}
+                  className="w-full inline-flex items-center justify-center gap-2 px-3 py-2 text-xs font-medium text-slate-700 dark:text-slate-200 bg-slate-100 dark:bg-slate-800 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-700 cursor-pointer"
+                >
+                  <LogOut className="w-3.5 h-3.5" />
+                  Sign Out
+                </button>
+              )}
             </div>
           </aside>
         </div>
@@ -653,56 +803,59 @@ function MainWorkspace() {
       {/* Main Content Area */}
       <div className="flex-1 min-w-0 flex flex-col">
         {/* Top Bar Contract */}
-        <header className="bg-white border-b border-slate-200 sticky top-0 z-30">
+        <header className="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 sticky top-0 z-30 transition-colors">
           <div className="max-w-[1280px] mx-auto px-4 sm:px-6 py-3.5 flex flex-wrap items-center justify-between gap-4">
             <div className="flex items-center gap-3 min-w-0">
               <button
                 type="button"
                 onClick={() => setMobileMenuOpen(true)}
                 aria-label="Open menu"
-                className="lg:hidden p-2 text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-lg cursor-pointer"
+                className="lg:hidden p-2 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg cursor-pointer"
               >
                 <Menu className="w-5 h-5" />
               </button>
               <div className="flex items-center gap-2 text-sm min-w-0">
-                <span className="text-slate-500 truncate hidden sm:inline">
+                <span className="text-slate-500 dark:text-slate-400 truncate hidden sm:inline">
                   {preferences.businessName}
                 </span>
-                <span aria-hidden="true" className="text-slate-300 hidden sm:inline">
+                <span
+                  aria-hidden="true"
+                  className="text-slate-300 dark:text-slate-600 hidden sm:inline"
+                >
                   /
                 </span>
-                <h1 className="font-display font-bold text-slate-900 truncate whitespace-nowrap">
+                <h1 className="font-display font-bold text-slate-900 dark:text-slate-100 truncate whitespace-nowrap">
                   {activeNavTitle}
                 </h1>
               </div>
             </div>
 
-            <div className="flex items-center gap-3 shrink-0">
+            <div className="flex items-center gap-2.5 sm:gap-3 shrink-0">
               {/* Month Selector */}
-              <div className="flex items-center bg-slate-100 rounded-lg p-0.5">
+              <div className="flex items-center bg-slate-100 dark:bg-slate-800 rounded-lg p-0.5">
                 <button
                   type="button"
                   onClick={() => setMonthKey(shiftMonthKey(monthKey, -1))}
                   aria-label="Previous month"
-                  className="p-1.5 text-slate-600 hover:text-slate-900 rounded-md cursor-pointer"
+                  className="p-1.5 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 rounded-md cursor-pointer"
                 >
                   <ChevronLeft className="w-4 h-4" />
                 </button>
-                <span className="px-2.5 text-xs font-semibold text-slate-800 whitespace-nowrap min-w-[110px] text-center">
+                <span className="px-2.5 text-xs font-semibold text-slate-800 dark:text-slate-200 whitespace-nowrap min-w-[110px] text-center">
                   {getMonthLabel(monthKey)}
                 </span>
                 <button
                   type="button"
                   onClick={() => setMonthKey(shiftMonthKey(monthKey, 1))}
                   aria-label="Next month"
-                  className="p-1.5 text-slate-600 hover:text-slate-900 rounded-md cursor-pointer"
+                  className="p-1.5 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 rounded-md cursor-pointer"
                 >
                   <ChevronRight className="w-4 h-4" />
                 </button>
               </div>
 
               {/* Display Currency Switch */}
-              <div className="hidden sm:flex items-center p-1 bg-slate-100 rounded-lg">
+              <div className="hidden sm:flex items-center p-1 bg-slate-100 dark:bg-slate-800 rounded-lg">
                 {(['USD', 'TZS', 'BOTH'] as const).map((m) => (
                   <button
                     key={m}
@@ -710,8 +863,8 @@ function MainWorkspace() {
                     onClick={() => setDisplayMode(m)}
                     className={`px-2.5 py-1 text-xs font-medium rounded-md transition-colors cursor-pointer whitespace-nowrap ${
                       displayMode === m
-                        ? 'bg-white text-slate-900 shadow-xs'
-                        : 'text-slate-600 hover:text-slate-900'
+                        ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 shadow-xs'
+                        : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100'
                     }`}
                   >
                     {m === 'BOTH' ? 'USD + TZS' : m}
@@ -719,17 +872,53 @@ function MainWorkspace() {
                 ))}
               </div>
 
+              {/* Light / Dark Mode Switcher Icon */}
+              <button
+                type="button"
+                onClick={toggleTheme}
+                aria-label={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+                title={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+                className="p-2 text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 hover:text-slate-900 dark:hover:text-slate-100 rounded-lg transition-colors cursor-pointer shrink-0"
+              >
+                {theme === 'dark' ? (
+                  <Sun className="w-4 h-4 text-amber-400" />
+                ) : (
+                  <Moon className="w-4 h-4" />
+                )}
+              </button>
+
               <button
                 type="button"
                 onClick={() => openNewEntry()}
                 className="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold text-white bg-emerald-700 rounded-lg hover:bg-emerald-800 transition-colors cursor-pointer whitespace-nowrap shrink-0"
               >
-                <Plus className="w-3.5 h-3.5" />
+                {isGuest ? <Lock className="w-3.5 h-3.5" /> : <Plus className="w-3.5 h-3.5" />}
                 Log Entry
               </button>
             </div>
           </div>
         </header>
+
+        {isGuest && (
+          <div className="bg-amber-50 dark:bg-amber-950/50 border-b border-amber-200 dark:border-amber-900/70">
+            <div className="max-w-[1280px] mx-auto px-4 sm:px-6 py-2.5 flex flex-wrap items-center justify-between gap-3 text-xs">
+              <div className="flex items-center gap-2 text-amber-900 dark:text-amber-200">
+                <Lock className="w-3.5 h-3.5 shrink-0" />
+                <span>
+                  Guest Preview (Read-Only) · View all reports and cash flow patterns freely. Open a
+                  Google account to add, edit, or save entries.
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={handleGuestSignIn}
+                className="px-3 py-1 font-semibold text-white bg-slate-900 dark:bg-emerald-700 rounded-md hover:bg-slate-800 dark:hover:bg-emerald-600 transition-colors cursor-pointer whitespace-nowrap shrink-0"
+              >
+                Sign In to Edit
+              </button>
+            </div>
+          </div>
+        )}
 
         {/* Main Viewport */}
         <main className="flex-1 max-w-[1280px] w-full mx-auto px-4 sm:px-6 py-6">
@@ -739,11 +928,11 @@ function MainWorkspace() {
                 {[1, 2, 3, 4].map((i) => (
                   <div
                     key={i}
-                    className="h-28 bg-white border border-slate-200 rounded-xl animate-pulse"
+                    className="h-28 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl animate-pulse"
                   />
                 ))}
               </div>
-              <div className="h-72 bg-white border border-slate-200 rounded-xl animate-pulse" />
+              <div className="h-72 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl animate-pulse" />
             </div>
           ) : (
             <>
@@ -796,7 +985,13 @@ function MainWorkspace() {
                   preferences={preferences}
                   displayMode={displayMode}
                   onOpenNewEntry={(t, amt, em, dId) => openNewEntry(t, amt, em, dId)}
-                  onOpenNewDebt={() => setDebtModalOpen(true)}
+                  onOpenNewDebt={() => {
+                    if (isGuest || !user) {
+                      setGuestPromptAction('add a debt account');
+                      return;
+                    }
+                    setDebtModalOpen(true);
+                  }}
                   onDeleteDebt={handleDeleteDebt}
                 />
               )}
@@ -810,6 +1005,7 @@ function MainWorkspace() {
                   seedingSample={seedingSample}
                   entryCount={entries.length}
                   debtCount={debts.length}
+                  isGuest={isGuest}
                 />
               )}
             </>
@@ -840,6 +1036,16 @@ function MainWorkspace() {
         onClose={() => setDebtModalOpen(false)}
         onSave={handleSaveDebt}
         defaultDueDate={`${monthKey}-28`}
+      />
+
+      <GuestUpgradeModal
+        isOpen={guestPromptAction !== null}
+        actionLabel={guestPromptAction || undefined}
+        onClose={() => setGuestPromptAction(null)}
+        onSignedIn={() => {
+          setIsGuest(false);
+          setGuestPromptAction(null);
+        }}
       />
     </div>
   );

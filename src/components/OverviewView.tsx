@@ -69,11 +69,11 @@ export const OverviewView: React.FC<OverviewViewProps> = ({
 
   if (entries.length === 0) {
     return (
-      <div className="bg-white border border-slate-200 rounded-xl p-10 max-w-2xl mx-auto mt-8 text-center">
-        <h2 className="font-display text-2xl font-bold text-slate-900">
+      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-10 max-w-2xl mx-auto mt-8 text-center transition-colors">
+        <h2 className="font-display text-2xl font-bold text-slate-900 dark:text-slate-100">
           Your Business &amp; Stewardship Journal is Ready
         </h2>
-        <p className="text-sm text-slate-600 mt-3 leading-relaxed max-w-lg mx-auto">
+        <p className="text-sm text-slate-600 dark:text-slate-400 mt-3 leading-relaxed max-w-lg mx-auto">
           Start logging daily transactions in USD or TZS to uncover cash flow patterns, track
           emergency uses, monitor debt milestones, and automatically compute your{' '}
           {preferences.titheRatePercent}% tithe on money gained.
@@ -91,7 +91,7 @@ export const OverviewView: React.FC<OverviewViewProps> = ({
             type="button"
             onClick={onLoadSampleData}
             disabled={seedingSample}
-            className="inline-flex items-center gap-2 px-5 py-2.5 text-sm font-medium text-slate-700 bg-slate-100 rounded-lg hover:bg-slate-200 transition-colors disabled:opacity-60 cursor-pointer whitespace-nowrap"
+            className="inline-flex items-center gap-2 px-5 py-2.5 text-sm font-medium text-slate-700 dark:text-slate-200 bg-slate-100 dark:bg-slate-800 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors disabled:opacity-60 cursor-pointer whitespace-nowrap"
           >
             <Sparkles className="w-4 h-4" />
             {seedingSample ? 'Loading Sample Ledger...' : 'Load Sample USD & TZS Month'}
@@ -106,13 +106,13 @@ export const OverviewView: React.FC<OverviewViewProps> = ({
       label: 'Money Gained (Business & Income)',
       dual: summary.income,
       pct: summary.income.usd > 0 ? 100 : 0,
-      tone: 'text-emerald-700',
+      tone: 'text-emerald-700 dark:text-emerald-400',
     },
     {
       label: 'Operating & Living Spending',
       dual: summary.spending,
       pct: summary.spendingRatioPct,
-      tone: 'text-rose-700',
+      tone: 'text-rose-700 dark:text-rose-400',
     },
     {
       label: 'Savings Allocated',
@@ -121,7 +121,7 @@ export const OverviewView: React.FC<OverviewViewProps> = ({
         summary.income.usd > 0
           ? Math.round((summary.saving.usd / summary.income.usd) * 1000) / 10
           : 0,
-      tone: 'text-blue-700',
+      tone: 'text-blue-700 dark:text-blue-400',
     },
     {
       label: 'Emergency Reserve Funded',
@@ -130,7 +130,7 @@ export const OverviewView: React.FC<OverviewViewProps> = ({
         summary.income.usd > 0
           ? Math.round((summary.emergencyFunded.usd / summary.income.usd) * 1000) / 10
           : 0,
-      tone: 'text-emerald-700',
+      tone: 'text-emerald-700 dark:text-emerald-400',
     },
     {
       label: 'Emergency Uses Drawn',
@@ -139,13 +139,13 @@ export const OverviewView: React.FC<OverviewViewProps> = ({
         summary.income.usd > 0
           ? Math.round((summary.emergencyUsed.usd / summary.income.usd) * 1000) / 10
           : 0,
-      tone: 'text-amber-700',
+      tone: 'text-amber-700 dark:text-amber-400',
     },
     {
       label: 'Investments Deployed',
       dual: summary.investment,
       pct: summary.investmentRatePct,
-      tone: 'text-blue-700',
+      tone: 'text-blue-700 dark:text-blue-400',
     },
     {
       label: 'Debt Principal Repaid',
@@ -154,7 +154,7 @@ export const OverviewView: React.FC<OverviewViewProps> = ({
         summary.income.usd > 0
           ? Math.round((summary.debtRepaid.usd / summary.income.usd) * 1000) / 10
           : 0,
-      tone: 'text-slate-800',
+      tone: 'text-slate-800 dark:text-slate-200',
     },
     {
       label: `Tithe Paid (${preferences.titheRatePercent}% Rule)`,
@@ -163,7 +163,7 @@ export const OverviewView: React.FC<OverviewViewProps> = ({
         summary.income.usd > 0
           ? Math.round((summary.tithePaid.usd / summary.income.usd) * 1000) / 10
           : 0,
-      tone: 'text-emerald-700',
+      tone: 'text-emerald-700 dark:text-emerald-400',
     },
     {
       label: 'Offering & Charity Given',
@@ -172,7 +172,7 @@ export const OverviewView: React.FC<OverviewViewProps> = ({
         summary.income.usd > 0
           ? Math.round((summary.offering.usd / summary.income.usd) * 1000) / 10
           : 0,
-      tone: 'text-slate-800',
+      tone: 'text-slate-800 dark:text-slate-200',
     },
   ];
 
@@ -182,10 +182,10 @@ export const OverviewView: React.FC<OverviewViewProps> = ({
     <div className="space-y-6">
       {/* KPI Strip */}
       <section aria-label="Monthly key financial indicators" className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
-        <div className="bg-white border border-slate-200 rounded-xl p-5">
-          <div className="flex items-center justify-between text-xs text-slate-500 mb-2">
+        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-5 transition-colors">
+          <div className="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400 mb-2">
             <span>Total Money Gained</span>
-            <span className="inline-flex items-center gap-1 text-emerald-700 font-medium">
+            <span className="inline-flex items-center gap-1 text-emerald-700 dark:text-emerald-400 font-medium">
               <ArrowUpRight className="w-3.5 h-3.5" />
               Inflow
             </span>
@@ -194,20 +194,24 @@ export const OverviewView: React.FC<OverviewViewProps> = ({
             usd={summary.income.usd}
             tzs={summary.income.tzs}
             mode={displayMode}
-            className="text-2xl font-bold text-slate-900"
+            className="text-2xl font-bold text-slate-900 dark:text-slate-100"
           />
-          <p className="text-xs text-slate-500 mt-3 tabular-nums">
+          <p className="text-xs text-slate-500 dark:text-slate-400 mt-3 tabular-nums">
             {incomeDeltaPct !== null
               ? `${incomeDeltaPct >= 0 ? '+' : ''}${incomeDeltaPct}% vs ${getMonthLabel(prevSummary.monthKey)}`
               : `${summary.entryCount} entries in ${getMonthLabel(monthKey)}`}
           </p>
         </div>
 
-        <div className="bg-white border border-slate-200 rounded-xl p-5">
-          <div className="flex items-center justify-between text-xs text-slate-500 mb-2">
+        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-5 transition-colors">
+          <div className="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400 mb-2">
             <span>Net Cash Flow</span>
             <span
-              className={`font-medium ${isPositiveNet ? 'text-emerald-700' : 'text-rose-700'}`}
+              className={`font-medium ${
+                isPositiveNet
+                  ? 'text-emerald-700 dark:text-emerald-400'
+                  : 'text-rose-700 dark:text-rose-400'
+              }`}
             >
               {isPositiveNet ? 'Surplus' : 'Deficit'}
             </span>
@@ -216,9 +220,13 @@ export const OverviewView: React.FC<OverviewViewProps> = ({
             usd={summary.netCashFlow.usd}
             tzs={summary.netCashFlow.tzs}
             mode={displayMode}
-            className={`text-2xl font-bold ${isPositiveNet ? 'text-slate-900' : 'text-rose-700'}`}
+            className={`text-2xl font-bold ${
+              isPositiveNet
+                ? 'text-slate-900 dark:text-slate-100'
+                : 'text-rose-700 dark:text-rose-400'
+            }`}
           />
-          <p className="text-xs text-slate-500 mt-3 tabular-nums">
+          <p className="text-xs text-slate-500 dark:text-slate-400 mt-3 tabular-nums">
             Outflows:{' '}
             {displayMode === 'TZS'
               ? formatTZS(summary.totalOutflows.tzs)
@@ -226,10 +234,10 @@ export const OverviewView: React.FC<OverviewViewProps> = ({
           </p>
         </div>
 
-        <div className="bg-white border border-slate-200 rounded-xl p-5">
-          <div className="flex items-center justify-between text-xs text-slate-500 mb-2">
+        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-5 transition-colors">
+          <div className="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400 mb-2">
             <span>Operating Spending</span>
-            <span className="inline-flex items-center gap-1 text-rose-700 font-medium">
+            <span className="inline-flex items-center gap-1 text-rose-700 dark:text-rose-400 font-medium">
               <ArrowDownRight className="w-3.5 h-3.5" />
               {summary.spendingRatioPct}% of gain
             </span>
@@ -238,9 +246,9 @@ export const OverviewView: React.FC<OverviewViewProps> = ({
             usd={summary.spending.usd}
             tzs={summary.spending.tzs}
             mode={displayMode}
-            className="text-2xl font-bold text-slate-900"
+            className="text-2xl font-bold text-slate-900 dark:text-slate-100"
           />
-          <p className="text-xs text-slate-500 mt-3 tabular-nums">
+          <p className="text-xs text-slate-500 dark:text-slate-400 mt-3 tabular-nums">
             Emergency uses:{' '}
             {displayMode === 'TZS'
               ? formatTZS(summary.emergencyUsed.tzs)
@@ -248,12 +256,14 @@ export const OverviewView: React.FC<OverviewViewProps> = ({
           </p>
         </div>
 
-        <div className="bg-white border border-slate-200 rounded-xl p-5">
-          <div className="flex items-center justify-between text-xs text-slate-500 mb-2">
+        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-5 transition-colors">
+          <div className="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400 mb-2">
             <span>Tithe ({preferences.titheRatePercent}% of Gains)</span>
             <span
               className={`font-medium ${
-                summary.titheBalanceDue.usd <= 0.01 ? 'text-emerald-700' : 'text-amber-700'
+                summary.titheBalanceDue.usd <= 0.01
+                  ? 'text-emerald-700 dark:text-emerald-400'
+                  : 'text-amber-700 dark:text-amber-400'
               }`}
             >
               {summary.titheBalanceDue.usd <= 0.01 ? 'Settled' : 'Balance Due'}
@@ -263,10 +273,10 @@ export const OverviewView: React.FC<OverviewViewProps> = ({
             usd={summary.titheAccrued.usd}
             tzs={summary.titheAccrued.tzs}
             mode={displayMode}
-            className="text-2xl font-bold text-slate-900"
+            className="text-2xl font-bold text-slate-900 dark:text-slate-100"
           />
           <div className="mt-3 flex items-center justify-between gap-2 text-xs">
-            <span className="text-slate-500 tabular-nums">
+            <span className="text-slate-500 dark:text-slate-400 tabular-nums">
               Due:{' '}
               {displayMode === 'TZS'
                 ? formatTZS(summary.titheBalanceDue.tzs)
@@ -276,7 +286,7 @@ export const OverviewView: React.FC<OverviewViewProps> = ({
               <button
                 type="button"
                 onClick={() => onOpenNewEntry('tithe', summary.titheBalanceDue.usd)}
-                className="text-emerald-700 font-semibold hover:underline cursor-pointer whitespace-nowrap"
+                className="text-emerald-700 dark:text-emerald-400 font-semibold hover:underline cursor-pointer whitespace-nowrap"
               >
                 Settle Now
               </button>
@@ -287,20 +297,20 @@ export const OverviewView: React.FC<OverviewViewProps> = ({
 
       {/* Cash Flow Pattern Chart + Weekday Pattern */}
       <section className="grid grid-cols-1 xl:grid-cols-12 gap-6">
-        <div className="xl:col-span-8 bg-white border border-slate-200 rounded-xl p-6">
+        <div className="xl:col-span-8 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-6 transition-colors">
           <div className="flex flex-wrap items-center justify-between gap-4 mb-5">
             <div>
-              <h2 className="font-display text-base font-semibold text-slate-900">
+              <h2 className="font-display text-base font-semibold text-slate-900 dark:text-slate-100">
                 Daily Cash Flow Pattern — {getMonthLabel(monthKey)}
               </h2>
-              <p className="text-xs text-slate-500 mt-0.5">
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
                 Day-by-day inflows against total outflows and cumulative net trajectory
               </p>
             </div>
             <button
               type="button"
               onClick={() => exportMonthToCSV(entries, monthKey)}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-slate-700 bg-slate-100 rounded-lg hover:bg-slate-200 transition-colors cursor-pointer whitespace-nowrap shrink-0"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-slate-700 dark:text-slate-200 bg-slate-100 dark:bg-slate-800 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors cursor-pointer whitespace-nowrap shrink-0"
             >
               <Download className="w-3.5 h-3.5" />
               Export Entries CSV
@@ -309,34 +319,34 @@ export const OverviewView: React.FC<OverviewViewProps> = ({
           <CashFlowChart series={dailySeries} displayMode={displayMode} />
         </div>
 
-        <div className="xl:col-span-4 bg-white border border-slate-200 rounded-xl p-6 flex flex-col">
-          <h2 className="font-display text-base font-semibold text-slate-900">
+        <div className="xl:col-span-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-6 flex flex-col transition-colors">
+          <h2 className="font-display text-base font-semibold text-slate-900 dark:text-slate-100">
             Weekday Cash Velocity
           </h2>
-          <p className="text-xs text-slate-500 mt-0.5 mb-4">
+          <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 mb-4">
             Which days generate inflows vs absorb outflows
           </p>
 
           <div className="flex-1 overflow-x-auto">
             <table className="w-full text-xs">
               <thead>
-                <tr className="border-b border-slate-200 text-slate-500">
+                <tr className="border-b border-slate-200 dark:border-slate-800 text-slate-500 dark:text-slate-400">
                   <th className="text-left font-medium py-2">Day</th>
                   <th className="text-right font-medium py-2">Inflow</th>
                   <th className="text-right font-medium py-2">Outflow</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100">
+              <tbody className="divide-y divide-slate-100 dark:divide-slate-800/80">
                 {dayOfWeek.map((d) => (
-                  <tr key={d.dayLabel} className="hover:bg-slate-50">
-                    <td className="py-2.5 text-slate-700 font-medium">
+                  <tr key={d.dayLabel} className="hover:bg-slate-50 dark:hover:bg-slate-800/60">
+                    <td className="py-2.5 text-slate-700 dark:text-slate-300 font-medium">
                       {d.dayLabel}
-                      <span className="text-slate-400 font-normal ml-1.5">· {d.txCount}</span>
+                      <span className="text-slate-400 dark:text-slate-500 font-normal ml-1.5">· {d.txCount}</span>
                     </td>
-                    <td className="py-2.5 text-right font-mono tabular-nums text-emerald-700">
+                    <td className="py-2.5 text-right font-mono tabular-nums text-emerald-700 dark:text-emerald-400">
                       {displayMode === 'TZS' ? formatTZS(d.inflowTZS) : formatUSD(d.inflowUSD)}
                     </td>
-                    <td className="py-2.5 text-right font-mono tabular-nums text-rose-700">
+                    <td className="py-2.5 text-right font-mono tabular-nums text-rose-700 dark:text-rose-400">
                       {displayMode === 'TZS' ? formatTZS(d.outflowTZS) : formatUSD(d.outflowUSD)}
                     </td>
                   </tr>
@@ -349,13 +359,13 @@ export const OverviewView: React.FC<OverviewViewProps> = ({
 
       {/* Monthly Allocation Breakdown + Financial Health Assessment */}
       <section className="grid grid-cols-1 xl:grid-cols-12 gap-6">
-        <div className="xl:col-span-7 bg-white border border-slate-200 rounded-xl p-6">
+        <div className="xl:col-span-7 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-6 transition-colors">
           <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
             <div>
-              <h2 className="font-display text-base font-semibold text-slate-900">
+              <h2 className="font-display text-base font-semibold text-slate-900 dark:text-slate-100">
                 Monthly Capital &amp; Stewardship Summary
               </h2>
-              <p className="text-xs text-slate-500 mt-0.5">
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
                 How every unit gained in {getMonthLabel(monthKey)} was deployed · Rate: 1 USD ={' '}
                 {preferences.exchangeRateTzsPerUsd.toLocaleString()} TZS
               </p>
@@ -363,7 +373,7 @@ export const OverviewView: React.FC<OverviewViewProps> = ({
             <button
               type="button"
               onClick={() => exportMonthlySummaryToCSV(summary, overall, preferences)}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-white bg-slate-900 rounded-lg hover:bg-slate-800 transition-colors cursor-pointer whitespace-nowrap shrink-0"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-white bg-slate-900 dark:bg-emerald-700 rounded-lg hover:bg-slate-800 dark:hover:bg-emerald-600 transition-colors cursor-pointer whitespace-nowrap shrink-0"
             >
               <Download className="w-3.5 h-3.5" />
               Export Summary CSV
@@ -373,17 +383,17 @@ export const OverviewView: React.FC<OverviewViewProps> = ({
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b border-slate-200 text-xs text-slate-500">
+                <tr className="border-b border-slate-200 dark:border-slate-800 text-xs text-slate-500 dark:text-slate-400">
                   <th className="text-left font-medium py-2.5">Pillar</th>
                   <th className="text-right font-medium py-2.5">Share of Gains</th>
                   <th className="text-right font-medium py-2.5">Amount</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100">
+              <tbody className="divide-y divide-slate-100 dark:divide-slate-800/80">
                 {allocationRows.map((row) => (
-                  <tr key={row.label} className="hover:bg-slate-50">
-                    <td className="py-3 text-slate-800 font-medium">{row.label}</td>
-                    <td className="py-3 text-right font-mono tabular-nums text-xs text-slate-500">
+                  <tr key={row.label} className="hover:bg-slate-50 dark:hover:bg-slate-800/60">
+                    <td className="py-3 text-slate-800 dark:text-slate-200 font-medium">{row.label}</td>
+                    <td className="py-3 text-right font-mono tabular-nums text-xs text-slate-500 dark:text-slate-400">
                       {row.pct}%
                     </td>
                     <td className="py-3">
@@ -402,31 +412,31 @@ export const OverviewView: React.FC<OverviewViewProps> = ({
           </div>
         </div>
 
-        <div className="xl:col-span-5 bg-white border border-slate-200 rounded-xl p-6 space-y-5">
+        <div className="xl:col-span-5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-6 space-y-5 transition-colors">
           <div>
-            <h2 className="font-display text-base font-semibold text-slate-900">
+            <h2 className="font-display text-base font-semibold text-slate-900 dark:text-slate-100">
               Overall Financial Health Indicators
             </h2>
-            <p className="text-xs text-slate-500 mt-0.5">
+            <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
               Cumulative resilience, stewardship, and debt reduction across your journal
             </p>
           </div>
 
-          <div className="divide-y divide-slate-100">
+          <div className="divide-y divide-slate-100 dark:divide-slate-800">
             <div className="py-3.5 first:pt-0">
               <div className="flex items-center justify-between text-sm">
-                <span className="font-medium text-slate-800">Savings &amp; Reserve Rate</span>
-                <span className="font-mono tabular-nums font-semibold text-slate-900">
+                <span className="font-medium text-slate-800 dark:text-slate-200">Savings &amp; Reserve Rate</span>
+                <span className="font-mono tabular-nums font-semibold text-slate-900 dark:text-slate-100">
                   {summary.savingsRatePct}%
                 </span>
               </div>
-              <div className="w-full h-2 bg-slate-100 rounded-full mt-2 overflow-hidden">
+              <div className="w-full h-2 bg-slate-100 dark:bg-slate-800 rounded-full mt-2 overflow-hidden">
                 <div
-                  className="h-full bg-blue-600 rounded-full"
+                  className="h-full bg-blue-600 dark:bg-blue-500 rounded-full"
                   style={{ width: `${Math.min(100, summary.savingsRatePct)}%` }}
                 />
               </div>
-              <p className="text-xs text-slate-500 mt-1.5">
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-1.5">
                 {summary.savingsRatePct >= 20
                   ? 'Above 20% target benchmark for healthy business capital retention.'
                   : 'Below 20% benchmark; consider increasing monthly reserve allocations.'}
@@ -435,14 +445,14 @@ export const OverviewView: React.FC<OverviewViewProps> = ({
 
             <div className="py-3.5">
               <div className="flex items-center justify-between text-sm">
-                <span className="font-medium text-slate-800">Emergency Runway Coverage</span>
-                <span className="font-mono tabular-nums font-semibold text-slate-900">
+                <span className="font-medium text-slate-800 dark:text-slate-200">Emergency Runway Coverage</span>
+                <span className="font-mono tabular-nums font-semibold text-slate-900 dark:text-slate-100">
                   {overall.emergencyRunwayMonths} mo / {preferences.emergencyTargetMonths} mo goal
                 </span>
               </div>
-              <div className="w-full h-2 bg-slate-100 rounded-full mt-2 overflow-hidden">
+              <div className="w-full h-2 bg-slate-100 dark:bg-slate-800 rounded-full mt-2 overflow-hidden">
                 <div
-                  className="h-full bg-emerald-600 rounded-full"
+                  className="h-full bg-emerald-600 dark:bg-emerald-500 rounded-full"
                   style={{
                     width: `${Math.min(
                       100,
@@ -453,7 +463,7 @@ export const OverviewView: React.FC<OverviewViewProps> = ({
                   }}
                 />
               </div>
-              <p className="text-xs text-slate-500 mt-1.5">
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-1.5">
                 Net Reserve:{' '}
                 {displayMode === 'TZS'
                   ? formatTZS(overall.emergencyReserveNet.tzs)
@@ -468,24 +478,24 @@ export const OverviewView: React.FC<OverviewViewProps> = ({
 
             <div className="py-3.5">
               <div className="flex items-center justify-between text-sm">
-                <span className="font-medium text-slate-800">Tithe &amp; Offering Generosity</span>
-                <span className="font-mono tabular-nums font-semibold text-slate-900">
+                <span className="font-medium text-slate-800 dark:text-slate-200">Tithe &amp; Offering Generosity</span>
+                <span className="font-mono tabular-nums font-semibold text-slate-900 dark:text-slate-100">
                   {summary.generosityRatePct}% of gains
                 </span>
               </div>
-              <div className="w-full h-2 bg-slate-100 rounded-full mt-2 overflow-hidden">
+              <div className="w-full h-2 bg-slate-100 dark:bg-slate-800 rounded-full mt-2 overflow-hidden">
                 <div
-                  className="h-full bg-emerald-600 rounded-full"
+                  className="h-full bg-emerald-600 dark:bg-emerald-500 rounded-full"
                   style={{ width: `${Math.min(100, summary.titheCompletionPct)}%` }}
                 />
               </div>
-              <p className="text-xs text-slate-500 mt-1.5">
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-1.5">
                 {summary.titheCompletionPct}% of this month&apos;s {preferences.titheRatePercent}%
                 tithe settled ·{' '}
                 <button
                   type="button"
                   onClick={() => onNavigate('stewardship')}
-                  className="text-emerald-700 font-medium hover:underline cursor-pointer"
+                  className="text-emerald-700 dark:text-emerald-400 font-medium hover:underline cursor-pointer"
                 >
                   Open Tithe Ledger
                 </button>
@@ -494,18 +504,18 @@ export const OverviewView: React.FC<OverviewViewProps> = ({
 
             <div className="py-3.5 last:pb-0">
               <div className="flex items-center justify-between text-sm">
-                <span className="font-medium text-slate-800">Debt Payoff Milestone Progress</span>
-                <span className="font-mono tabular-nums font-semibold text-slate-900">
+                <span className="font-medium text-slate-800 dark:text-slate-200">Debt Payoff Milestone Progress</span>
+                <span className="font-mono tabular-nums font-semibold text-slate-900 dark:text-slate-100">
                   {overall.debtPayoffPct}% repaid
                 </span>
               </div>
-              <div className="w-full h-2 bg-slate-100 rounded-full mt-2 overflow-hidden">
+              <div className="w-full h-2 bg-slate-100 dark:bg-slate-800 rounded-full mt-2 overflow-hidden">
                 <div
-                  className="h-full bg-slate-900 rounded-full"
+                  className="h-full bg-slate-900 dark:bg-slate-200 rounded-full"
                   style={{ width: `${Math.min(100, overall.debtPayoffPct)}%` }}
                 />
               </div>
-              <p className="text-xs text-slate-500 mt-1.5">
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-1.5">
                 Remaining principal:{' '}
                 {displayMode === 'TZS'
                   ? formatTZS(overall.totalDebtRemaining.tzs)
@@ -514,7 +524,7 @@ export const OverviewView: React.FC<OverviewViewProps> = ({
                 <button
                   type="button"
                   onClick={() => onNavigate('reserves')}
-                  className="text-slate-900 font-medium hover:underline cursor-pointer"
+                  className="text-slate-900 dark:text-slate-200 font-medium hover:underline cursor-pointer"
                 >
                   View Milestones
                 </button>
@@ -525,36 +535,36 @@ export const OverviewView: React.FC<OverviewViewProps> = ({
       </section>
 
       {/* Recent Journal Entries */}
-      <section className="bg-white border border-slate-200 rounded-xl p-6">
+      <section className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-6 transition-colors">
         <div className="flex flex-wrap items-center justify-between gap-4 mb-4">
           <div className="flex items-center gap-2">
-            <Calendar className="w-4 h-4 text-slate-500" />
-            <h2 className="font-display text-base font-semibold text-slate-900">
+            <Calendar className="w-4 h-4 text-slate-500 dark:text-slate-400" />
+            <h2 className="font-display text-base font-semibold text-slate-900 dark:text-slate-100">
               Latest Journal Entries — {getMonthLabel(monthKey)}
             </h2>
           </div>
           <button
             type="button"
             onClick={() => onNavigate('journal')}
-            className="text-xs font-semibold text-emerald-700 hover:underline cursor-pointer whitespace-nowrap"
+            className="text-xs font-semibold text-emerald-700 dark:text-emerald-400 hover:underline cursor-pointer whitespace-nowrap"
           >
             View All {monthEntries.length} Entries
           </button>
         </div>
 
         {monthEntries.length === 0 ? (
-          <div className="py-8 text-center text-sm text-slate-500">
+          <div className="py-8 text-center text-sm text-slate-500 dark:text-slate-400">
             No transactions recorded for {getMonthLabel(monthKey)} yet.{' '}
             <button
               type="button"
               onClick={() => onOpenNewEntry('income')}
-              className="text-emerald-700 font-semibold hover:underline cursor-pointer"
+              className="text-emerald-700 dark:text-emerald-400 font-semibold hover:underline cursor-pointer"
             >
               Log an entry
             </button>
           </div>
         ) : (
-          <div className="divide-y divide-slate-100">
+          <div className="divide-y divide-slate-100 dark:divide-slate-800">
             {monthEntries.slice(0, 6).map((entry) => {
               const meta = ENTRY_TYPE_META[entry.type];
               const isEmergencyUse =
@@ -563,22 +573,22 @@ export const OverviewView: React.FC<OverviewViewProps> = ({
               return (
                 <div
                   key={entry.id}
-                  className="py-3.5 flex items-center justify-between gap-4 hover:bg-slate-50 px-2 rounded-lg transition-colors"
+                  className="py-3.5 flex items-center justify-between gap-4 hover:bg-slate-50 dark:hover:bg-slate-800/60 px-2 rounded-lg transition-colors"
                 >
                   <div className="min-w-0">
-                    <div className="text-sm font-semibold text-slate-900 truncate">
+                    <div className="text-sm font-semibold text-slate-900 dark:text-slate-100 truncate">
                       {entry.title}
                     </div>
-                    <div className="text-xs text-slate-500 mt-0.5 flex flex-wrap items-center gap-1.5">
+                    <div className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 flex flex-wrap items-center gap-1.5">
                       <span>{entry.date}</span>
                       <span aria-hidden="true">·</span>
                       <span
                         className={
                           isEmergencyUse
-                            ? 'text-amber-700 font-medium'
+                            ? 'text-amber-700 dark:text-amber-400 font-medium'
                             : isInflow
-                            ? 'text-emerald-700 font-medium'
-                            : 'text-slate-600 font-medium'
+                            ? 'text-emerald-700 dark:text-emerald-400 font-medium'
+                            : 'text-slate-600 dark:text-slate-300 font-medium'
                         }
                       >
                         {isEmergencyUse ? 'Emergency Use' : meta.shortLabel}
@@ -602,7 +612,9 @@ export const OverviewView: React.FC<OverviewViewProps> = ({
                     prefix={isInflow ? '+' : isEmergencyUse ? '-' : ''}
                     align="right"
                     className={`text-sm font-semibold ${
-                      isInflow ? 'text-emerald-700' : 'text-slate-900'
+                      isInflow
+                        ? 'text-emerald-700 dark:text-emerald-400'
+                        : 'text-slate-900 dark:text-slate-100'
                     }`}
                   />
                 </div>

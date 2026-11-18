@@ -36,13 +36,13 @@ export const StewardshipView: React.FC<StewardshipViewProps> = ({
   return (
     <div className="space-y-6">
       {/* 10% Tithe Calculation Banner */}
-      <section className="bg-white border border-slate-200 rounded-xl p-6">
-        <div className="flex flex-wrap items-start justify-between gap-4 pb-6 border-b border-slate-200">
+      <section className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-6 transition-colors">
+        <div className="flex flex-wrap items-start justify-between gap-4 pb-6 border-b border-slate-200 dark:border-slate-800">
           <div>
-            <h2 className="font-display text-lg font-bold text-slate-900">
+            <h2 className="font-display text-lg font-bold text-slate-900 dark:text-slate-100">
               Tithe Accountability — {preferences.titheRatePercent}% of Total Money Gained
             </h2>
-            <p className="text-sm text-slate-600 mt-1 max-w-2xl">
+            <p className="text-sm text-slate-600 dark:text-slate-400 mt-1 max-w-2xl">
               Every income entry automatically accrues {preferences.titheRatePercent}% toward your
               tithe ledger in both USD and TZS, keeping your sacred tithe obligation distinct from
               freewill offerings and charitable donations.
@@ -60,7 +60,7 @@ export const StewardshipView: React.FC<StewardshipViewProps> = ({
                 Settle Remaining {preferences.titheRatePercent}% Tithe
               </button>
             ) : (
-              <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-emerald-700">
+              <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-emerald-700 dark:text-emerald-400">
                 <CheckCircle2 className="w-4 h-4" />
                 {getMonthLabel(monthKey)} Tithe Settled
               </span>
@@ -68,7 +68,7 @@ export const StewardshipView: React.FC<StewardshipViewProps> = ({
             <button
               type="button"
               onClick={() => onOpenNewEntry('offering')}
-              className="inline-flex items-center gap-2 px-4 py-2 text-xs font-medium text-slate-800 bg-slate-100 rounded-lg hover:bg-slate-200 transition-colors cursor-pointer whitespace-nowrap"
+              className="inline-flex items-center gap-2 px-4 py-2 text-xs font-medium text-slate-800 dark:text-slate-200 bg-slate-100 dark:bg-slate-800 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors cursor-pointer whitespace-nowrap"
             >
               <HeartHandshake className="w-3.5 h-3.5" />
               Record Offering / Charity
@@ -78,68 +78,70 @@ export const StewardshipView: React.FC<StewardshipViewProps> = ({
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 pt-6">
           <div>
-            <div className="text-xs text-slate-500 mb-1.5">
+            <div className="text-xs text-slate-500 dark:text-slate-400 mb-1.5">
               {getMonthLabel(monthKey)} Money Gained
             </div>
             <DualAmount
               usd={summary.income.usd}
               tzs={summary.income.tzs}
               mode={displayMode}
-              className="text-xl font-bold text-slate-900"
+              className="text-xl font-bold text-slate-900 dark:text-slate-100"
             />
           </div>
 
           <div>
-            <div className="text-xs text-slate-500 mb-1.5">
+            <div className="text-xs text-slate-500 dark:text-slate-400 mb-1.5">
               Tithe Accrued ({preferences.titheRatePercent}% Formula)
             </div>
             <DualAmount
               usd={summary.titheAccrued.usd}
               tzs={summary.titheAccrued.tzs}
               mode={displayMode}
-              className="text-xl font-bold text-slate-900"
+              className="text-xl font-bold text-slate-900 dark:text-slate-100"
             />
           </div>
 
           <div>
-            <div className="text-xs text-slate-500 mb-1.5">Tithe Paid This Month</div>
+            <div className="text-xs text-slate-500 dark:text-slate-400 mb-1.5">Tithe Paid This Month</div>
             <DualAmount
               usd={summary.tithePaid.usd}
               tzs={summary.tithePaid.tzs}
               mode={displayMode}
-              className="text-xl font-bold text-emerald-700"
+              className="text-xl font-bold text-emerald-700 dark:text-emerald-400"
             />
           </div>
 
           <div>
-            <div className="text-xs text-slate-500 mb-1.5">Tithe Balance Remaining</div>
+            <div className="text-xs text-slate-500 dark:text-slate-400 mb-1.5">Tithe Balance Remaining</div>
             <DualAmount
               usd={summary.titheBalanceDue.usd}
               tzs={summary.titheBalanceDue.tzs}
               mode={displayMode}
               className={`text-xl font-bold ${
-                hasRemainingMonthTithe ? 'text-amber-700' : 'text-emerald-700'
+                hasRemainingMonthTithe
+                  ? 'text-amber-700 dark:text-amber-400'
+                  : 'text-emerald-700 dark:text-emerald-400'
               }`}
             />
           </div>
         </div>
 
-        <div className="mt-6 pt-5 border-t border-slate-100 grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs text-slate-600">
+        <div className="mt-6 pt-5 border-t border-slate-100 dark:border-slate-800 grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs text-slate-600 dark:text-slate-400">
           <div>
             All-Time Tithe Accrued:{' '}
-            <span className="font-mono tabular-nums font-semibold text-slate-900">
+            <span className="font-mono tabular-nums font-semibold text-slate-900 dark:text-slate-100">
               ${overall.allTimeTitheAccrued.usd.toFixed(2)}
             </span>
           </div>
           <div>
             All-Time Tithe Paid:{' '}
-            <span className="font-mono tabular-nums font-semibold text-emerald-700">
+            <span className="font-mono tabular-nums font-semibold text-emerald-700 dark:text-emerald-400">
               ${overall.allTimeTithePaid.usd.toFixed(2)}
             </span>
           </div>
           <div>
             All-Time Offerings &amp; Charity:{' '}
-            <span className="font-mono tabular-nums font-semibold text-slate-900">
+            <span className="font-mono tabular-nums font-semibold text-slate-900 dark:text-slate-100">
               ${overall.allTimeOffering.usd.toFixed(2)}
             </span>
           </div>
@@ -148,13 +150,13 @@ export const StewardshipView: React.FC<StewardshipViewProps> = ({
 
       {/* Split Ledgers: Tithe vs Offering & Charity */}
       <section className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <div className="bg-white border border-slate-200 rounded-xl p-6">
+        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-6 transition-colors">
           <div className="flex items-center justify-between mb-4">
             <div>
-              <h3 className="font-display text-base font-semibold text-slate-900">
+              <h3 className="font-display text-base font-semibold text-slate-900 dark:text-slate-100">
                 Tithe Ledger — {getMonthLabel(monthKey)}
               </h3>
-              <p className="text-xs text-slate-500 mt-0.5">
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
                 {summary.titheCompletionPct}% of monthly {preferences.titheRatePercent}% obligation
                 fulfilled
               </p>
@@ -162,23 +164,25 @@ export const StewardshipView: React.FC<StewardshipViewProps> = ({
             <button
               type="button"
               onClick={() => onOpenNewEntry('tithe', summary.titheBalanceDue.usd)}
-              className="text-xs font-semibold text-emerald-700 hover:underline cursor-pointer whitespace-nowrap"
+              className="text-xs font-semibold text-emerald-700 dark:text-emerald-400 hover:underline cursor-pointer whitespace-nowrap"
             >
               + Add Tithe
             </button>
           </div>
 
           {titheEntries.length === 0 ? (
-            <div className="py-10 text-center text-sm text-slate-500">
+            <div className="py-10 text-center text-sm text-slate-500 dark:text-slate-400">
               No tithe entries recorded for {getMonthLabel(monthKey)} yet.
             </div>
           ) : (
-            <div className="divide-y divide-slate-100">
+            <div className="divide-y divide-slate-100 dark:divide-slate-800">
               {titheEntries.map((e) => (
                 <div key={e.id} className="py-3.5 flex items-center justify-between gap-4">
                   <div className="min-w-0">
-                    <div className="text-sm font-semibold text-slate-900 truncate">{e.title}</div>
-                    <div className="text-xs text-slate-500 mt-0.5">
+                    <div className="text-sm font-semibold text-slate-900 dark:text-slate-100 truncate">
+                      {e.title}
+                    </div>
+                    <div className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
                       {e.date} · {e.counterparty || 'Tithe'} · {e.account}
                     </div>
                   </div>
@@ -187,7 +191,7 @@ export const StewardshipView: React.FC<StewardshipViewProps> = ({
                     tzs={e.amountTZS}
                     mode={displayMode}
                     align="right"
-                    className="text-sm font-semibold text-emerald-700"
+                    className="text-sm font-semibold text-emerald-700 dark:text-emerald-400"
                   />
                 </div>
               ))}
@@ -195,36 +199,38 @@ export const StewardshipView: React.FC<StewardshipViewProps> = ({
           )}
         </div>
 
-        <div className="bg-white border border-slate-200 rounded-xl p-6">
+        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-6 transition-colors">
           <div className="flex items-center justify-between mb-4">
             <div>
-              <h3 className="font-display text-base font-semibold text-slate-900">
+              <h3 className="font-display text-base font-semibold text-slate-900 dark:text-slate-100">
                 Offering, Charity &amp; Donations — {getMonthLabel(monthKey)}
               </h3>
-              <p className="text-xs text-slate-500 mt-0.5">
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
                 Total Generosity Rate (Tithe + Offering): {summary.generosityRatePct}% of gains
               </p>
             </div>
             <button
               type="button"
               onClick={() => onOpenNewEntry('offering')}
-              className="text-xs font-semibold text-emerald-700 hover:underline cursor-pointer whitespace-nowrap"
+              className="text-xs font-semibold text-emerald-700 dark:text-emerald-400 hover:underline cursor-pointer whitespace-nowrap"
             >
               + Add Offering
             </button>
           </div>
 
           {offeringEntries.length === 0 ? (
-            <div className="py-10 text-center text-sm text-slate-500">
+            <div className="py-10 text-center text-sm text-slate-500 dark:text-slate-400">
               No offerings or charitable donations recorded for {getMonthLabel(monthKey)} yet.
             </div>
           ) : (
-            <div className="divide-y divide-slate-100">
+            <div className="divide-y divide-slate-100 dark:divide-slate-800">
               {offeringEntries.map((e) => (
                 <div key={e.id} className="py-3.5 flex items-center justify-between gap-4">
                   <div className="min-w-0">
-                    <div className="text-sm font-semibold text-slate-900 truncate">{e.title}</div>
-                    <div className="text-xs text-slate-500 mt-0.5">
+                    <div className="text-sm font-semibold text-slate-900 dark:text-slate-100 truncate">
+                      {e.title}
+                    </div>
+                    <div className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
                       {e.date} · {e.category}
                       {e.counterparty ? ` · ${e.counterparty}` : ''}
                     </div>
@@ -234,7 +240,7 @@ export const StewardshipView: React.FC<StewardshipViewProps> = ({
                     tzs={e.amountTZS}
                     mode={displayMode}
                     align="right"
-                    className="text-sm font-semibold text-slate-900"
+                    className="text-sm font-semibold text-slate-900 dark:text-slate-100"
                   />
                 </div>
               ))}

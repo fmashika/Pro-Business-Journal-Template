@@ -65,10 +65,10 @@ export const ReservesDebtView: React.FC<ReservesDebtViewProps> = ({
     <div className="space-y-6">
       {/* Top Summary Strip: Emergency Net Reserve, Savings, Investments, Debt Remaining */}
       <section className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
-        <div className="bg-white border border-slate-200 rounded-xl p-5">
-          <div className="flex items-center justify-between text-xs text-slate-500 mb-2">
+        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-5 transition-colors">
+          <div className="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400 mb-2">
             <span>Net Emergency Reserve</span>
-            <span className="text-emerald-700 font-medium">
+            <span className="text-emerald-700 dark:text-emerald-400 font-medium">
               {overall.emergencyRunwayMonths} mo runway
             </span>
           </div>
@@ -76,75 +76,79 @@ export const ReservesDebtView: React.FC<ReservesDebtViewProps> = ({
             usd={overall.emergencyReserveNet.usd}
             tzs={overall.emergencyReserveNet.tzs}
             mode={displayMode}
-            className="text-xl font-bold text-slate-900"
+            className="text-xl font-bold text-slate-900 dark:text-slate-100"
           />
-          <p className="text-xs text-slate-500 mt-2.5 tabular-nums">
+          <p className="text-xs text-slate-500 dark:text-slate-400 mt-2.5 tabular-nums">
             {emergencyDeposits.length} deposits · {emergencyUses.length} emergency uses
           </p>
         </div>
 
-        <div className="bg-white border border-slate-200 rounded-xl p-5">
-          <div className="flex items-center justify-between text-xs text-slate-500 mb-2">
+        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-5 transition-colors">
+          <div className="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400 mb-2">
             <span>Cumulative Savings</span>
-            <span className="text-blue-700 font-medium">Reserved</span>
+            <span className="text-blue-700 dark:text-blue-400 font-medium">Reserved</span>
           </div>
           <DualAmount
             usd={overall.totalSavingsAllTime.usd}
             tzs={overall.totalSavingsAllTime.tzs}
             mode={displayMode}
-            className="text-xl font-bold text-slate-900"
+            className="text-xl font-bold text-slate-900 dark:text-slate-100"
           />
-          <p className="text-xs text-slate-500 mt-2.5">
+          <p className="text-xs text-slate-500 dark:text-slate-400 mt-2.5">
             Goal: ${preferences.monthlySavingsGoalUsd.toLocaleString()}/mo
           </p>
         </div>
 
-        <div className="bg-white border border-slate-200 rounded-xl p-5">
-          <div className="flex items-center justify-between text-xs text-slate-500 mb-2">
+        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-5 transition-colors">
+          <div className="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400 mb-2">
             <span>Total Investments</span>
-            <span className="text-blue-700 font-medium">Deployed</span>
+            <span className="text-blue-700 dark:text-blue-400 font-medium">Deployed</span>
           </div>
           <DualAmount
             usd={overall.totalInvestedAllTime.usd}
             tzs={overall.totalInvestedAllTime.tzs}
             mode={displayMode}
-            className="text-xl font-bold text-slate-900"
+            className="text-xl font-bold text-slate-900 dark:text-slate-100"
           />
-          <p className="text-xs text-slate-500 mt-2.5">
+          <p className="text-xs text-slate-500 dark:text-slate-400 mt-2.5">
             {investmentEntries.length} investment entries logged
           </p>
         </div>
 
-        <div className="bg-white border border-slate-200 rounded-xl p-5">
-          <div className="flex items-center justify-between text-xs text-slate-500 mb-2">
+        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-5 transition-colors">
+          <div className="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400 mb-2">
             <span>Remaining Debt Balance</span>
-            <span className="text-slate-700 font-medium">{overall.debtPayoffPct}% paid</span>
+            <span className="text-slate-700 dark:text-slate-300 font-medium">
+              {overall.debtPayoffPct}% paid
+            </span>
           </div>
           <DualAmount
             usd={overall.totalDebtRemaining.usd}
             tzs={overall.totalDebtRemaining.tzs}
             mode={displayMode}
-            className="text-xl font-bold text-slate-900"
+            className="text-xl font-bold text-slate-900 dark:text-slate-100"
           />
-          <p className="text-xs text-slate-500 mt-2.5">{debts.length} tracked debt accounts</p>
+          <p className="text-xs text-slate-500 dark:text-slate-400 mt-2.5">
+            {debts.length} tracked debt accounts
+          </p>
         </div>
       </section>
 
       {/* Debt Repayment Milestones */}
-      <section className="bg-white border border-slate-200 rounded-xl p-6">
-        <div className="flex flex-wrap items-center justify-between gap-4 pb-5 border-b border-slate-200">
+      <section className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-6 transition-colors">
+        <div className="flex flex-wrap items-center justify-between gap-4 pb-5 border-b border-slate-200 dark:border-slate-800">
           <div>
-            <h2 className="font-display text-lg font-bold text-slate-900">
+            <h2 className="font-display text-lg font-bold text-slate-900 dark:text-slate-100">
               Debt Repayment Milestones
             </h2>
-            <p className="text-xs text-slate-500 mt-0.5">
+            <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
               Track principal reduction across 25%, 50%, 75%, and 100% payoff checkpoints
             </p>
           </div>
           <button
             type="button"
             onClick={onOpenNewDebt}
-            className="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold text-white bg-slate-900 rounded-lg hover:bg-slate-800 transition-colors cursor-pointer whitespace-nowrap"
+            className="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold text-white bg-slate-900 dark:bg-emerald-700 rounded-lg hover:bg-slate-800 dark:hover:bg-emerald-600 transition-colors cursor-pointer whitespace-nowrap"
           >
             <Plus className="w-3.5 h-3.5" />
             Add Debt Account
@@ -152,12 +156,12 @@ export const ReservesDebtView: React.FC<ReservesDebtViewProps> = ({
         </div>
 
         {debts.length === 0 ? (
-          <div className="py-10 text-center text-sm text-slate-500">
+          <div className="py-10 text-center text-sm text-slate-500 dark:text-slate-400">
             No debts tracked. Add a supplier credit, loan, or equipment line to monitor payoff
             milestones.
           </div>
         ) : (
-          <div className="divide-y divide-slate-200">
+          <div className="divide-y divide-slate-200 dark:divide-slate-800">
             {debts.map((debt) => {
               const pct = Math.min(
                 100,
@@ -176,17 +180,21 @@ export const ReservesDebtView: React.FC<ReservesDebtViewProps> = ({
                   <div className="flex flex-wrap items-start justify-between gap-4">
                     <div>
                       <div className="flex flex-wrap items-center gap-2">
-                        <h3 className="text-sm font-semibold text-slate-900">{debt.creditor}</h3>
-                        <span className="text-xs text-slate-400">·</span>
+                        <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100">
+                          {debt.creditor}
+                        </h3>
+                        <span className="text-xs text-slate-400 dark:text-slate-500">·</span>
                         <span
                           className={`text-xs font-semibold ${
-                            isPaidOff ? 'text-emerald-700' : 'text-slate-600'
+                            isPaidOff
+                              ? 'text-emerald-700 dark:text-emerald-400'
+                              : 'text-slate-600 dark:text-slate-400'
                           }`}
                         >
                           {isPaidOff ? 'Paid Off (100% Milestone)' : `Due ${debt.dueDate}`}
                         </span>
                       </div>
-                      <p className="text-xs text-slate-500 mt-0.5">
+                      <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
                         {debt.purpose || 'Tracked debt facility'} · Principal:{' '}
                         <span className="font-mono tabular-nums">
                           {formatNativeCurrency(debt.totalPrincipal, debt.currency)}
@@ -200,7 +208,7 @@ export const ReservesDebtView: React.FC<ReservesDebtViewProps> = ({
                         tzs={remainingDual.amountTZS}
                         mode={displayMode}
                         align="right"
-                        className="text-sm font-semibold text-slate-900"
+                        className="text-sm font-semibold text-slate-900 dark:text-slate-100"
                       />
                       {!isPaidOff && (
                         <button
@@ -216,7 +224,7 @@ export const ReservesDebtView: React.FC<ReservesDebtViewProps> = ({
                         onClick={() => handleDeleteDebt(debt.id)}
                         disabled={deletingDebtId === debt.id}
                         aria-label={`Delete debt ${debt.creditor}`}
-                        className="p-1.5 text-slate-400 hover:text-rose-700 hover:bg-rose-50 rounded-lg transition-colors cursor-pointer"
+                        className="p-1.5 text-slate-400 dark:text-slate-500 hover:text-rose-700 dark:hover:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/50 rounded-lg transition-colors cursor-pointer"
                       >
                         <Trash2 className="w-4 h-4" />
                       </button>
@@ -225,16 +233,18 @@ export const ReservesDebtView: React.FC<ReservesDebtViewProps> = ({
 
                   {/* Progress & Milestone Markers */}
                   <div>
-                    <div className="w-full h-2.5 bg-slate-100 rounded-full overflow-hidden">
+                    <div className="w-full h-2.5 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
                       <div
                         className={`h-full rounded-full transition-all duration-300 ${
-                          isPaidOff ? 'bg-emerald-600' : 'bg-slate-900'
+                          isPaidOff
+                            ? 'bg-emerald-600 dark:bg-emerald-500'
+                            : 'bg-slate-900 dark:bg-slate-200'
                         }`}
                         style={{ width: `${pct}%` }}
                       />
                     </div>
                     <div className="flex items-center justify-between mt-2 text-xs">
-                      <span className="font-mono tabular-nums text-slate-600">
+                      <span className="font-mono tabular-nums text-slate-600 dark:text-slate-400">
                         {formatNativeCurrency(debt.amountPaid, debt.currency)} paid ({pct}%)
                       </span>
                       <div className="flex items-center gap-3">
@@ -244,7 +254,9 @@ export const ReservesDebtView: React.FC<ReservesDebtViewProps> = ({
                             <span
                               key={m}
                               className={`inline-flex items-center gap-1 font-mono tabular-nums ${
-                                reached ? 'text-emerald-700 font-semibold' : 'text-slate-400'
+                                reached
+                                  ? 'text-emerald-700 dark:text-emerald-400 font-semibold'
+                                  : 'text-slate-400 dark:text-slate-500'
                               }`}
                             >
                               {reached && <CheckCircle2 className="w-3 h-3" />}
@@ -264,13 +276,13 @@ export const ReservesDebtView: React.FC<ReservesDebtViewProps> = ({
 
       {/* Emergency Uses Tracking + Investments */}
       <section className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <div className="bg-white border border-slate-200 rounded-xl p-6">
+        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-6 transition-colors">
           <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
             <div>
-              <h3 className="font-display text-base font-semibold text-slate-900">
+              <h3 className="font-display text-base font-semibold text-slate-900 dark:text-slate-100">
                 Emergency Uses Tracking Log
               </h3>
-              <p className="text-xs text-slate-500 mt-0.5">
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
                 Every emergency withdrawal tracked separately from normal operating spend
               </p>
             </div>
@@ -278,14 +290,14 @@ export const ReservesDebtView: React.FC<ReservesDebtViewProps> = ({
               <button
                 type="button"
                 onClick={() => onOpenNewEntry('emergency', undefined, 'fund')}
-                className="px-3 py-1.5 text-xs font-medium text-emerald-800 bg-emerald-50 rounded-lg hover:bg-emerald-100 transition-colors cursor-pointer whitespace-nowrap"
+                className="px-3 py-1.5 text-xs font-medium text-emerald-800 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/60 rounded-lg hover:bg-emerald-100 dark:hover:bg-emerald-900/60 transition-colors cursor-pointer whitespace-nowrap"
               >
                 + Fund Reserve
               </button>
               <button
                 type="button"
                 onClick={() => onOpenNewEntry('emergency', undefined, 'use')}
-                className="px-3 py-1.5 text-xs font-medium text-amber-800 bg-amber-50 rounded-lg hover:bg-amber-100 transition-colors cursor-pointer whitespace-nowrap"
+                className="px-3 py-1.5 text-xs font-medium text-amber-800 dark:text-amber-300 bg-amber-50 dark:bg-amber-950/60 rounded-lg hover:bg-amber-100 dark:hover:bg-amber-900/60 transition-colors cursor-pointer whitespace-nowrap"
               >
                 + Log Use
               </button>
@@ -293,24 +305,26 @@ export const ReservesDebtView: React.FC<ReservesDebtViewProps> = ({
           </div>
 
           {emergencyUses.length === 0 ? (
-            <div className="py-10 text-center text-sm text-slate-500">
+            <div className="py-10 text-center text-sm text-slate-500 dark:text-slate-400">
               No emergency withdrawals logged yet. Keep building your reserve buffer.
             </div>
           ) : (
-            <div className="divide-y divide-slate-100">
+            <div className="divide-y divide-slate-100 dark:divide-slate-800">
               {emergencyUses.map((e) => (
                 <div key={e.id} className="py-3.5 flex items-start justify-between gap-4">
                   <div className="min-w-0">
                     <div className="flex items-center gap-2">
-                      <ShieldAlert className="w-4 h-4 text-amber-600 shrink-0" />
-                      <span className="text-sm font-semibold text-slate-900 truncate">
+                      <ShieldAlert className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0" />
+                      <span className="text-sm font-semibold text-slate-900 dark:text-slate-100 truncate">
                         {e.title}
                       </span>
                     </div>
-                    <div className="text-xs text-slate-500 mt-0.5">
+                    <div className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
                       {e.date} · {e.category} · {e.account}
                     </div>
-                    {e.notes && <p className="text-xs text-slate-600 mt-1">{e.notes}</p>}
+                    {e.notes && (
+                      <p className="text-xs text-slate-600 dark:text-slate-400 mt-1">{e.notes}</p>
+                    )}
                   </div>
                   <DualAmount
                     usd={e.amountUSD}
@@ -318,7 +332,7 @@ export const ReservesDebtView: React.FC<ReservesDebtViewProps> = ({
                     mode={displayMode}
                     prefix="-"
                     align="right"
-                    className="text-sm font-semibold text-amber-700"
+                    className="text-sm font-semibold text-amber-700 dark:text-amber-400"
                   />
                 </div>
               ))}
@@ -326,46 +340,50 @@ export const ReservesDebtView: React.FC<ReservesDebtViewProps> = ({
           )}
         </div>
 
-        <div className="bg-white border border-slate-200 rounded-xl p-6">
+        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-6 transition-colors">
           <div className="flex items-center justify-between gap-3 mb-4">
             <div>
-              <h3 className="font-display text-base font-semibold text-slate-900">
+              <h3 className="font-display text-base font-semibold text-slate-900 dark:text-slate-100">
                 Investment &amp; Capital Growth Log
               </h3>
-              <p className="text-xs text-slate-500 mt-0.5">
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
                 Long-term capital deployed into funds, treasury bills, and expansion
               </p>
             </div>
             <button
               type="button"
               onClick={() => onOpenNewEntry('investment')}
-              className="text-xs font-semibold text-emerald-700 hover:underline cursor-pointer whitespace-nowrap"
+              className="text-xs font-semibold text-emerald-700 dark:text-emerald-400 hover:underline cursor-pointer whitespace-nowrap"
             >
               + Log Investment
             </button>
           </div>
 
           {investmentEntries.length === 0 ? (
-            <div className="py-10 text-center text-sm text-slate-500">
+            <div className="py-10 text-center text-sm text-slate-500 dark:text-slate-400">
               No investments logged yet. Record your first capital allocation.
             </div>
           ) : (
-            <div className="divide-y divide-slate-100">
+            <div className="divide-y divide-slate-100 dark:divide-slate-800">
               {investmentEntries.map((e) => (
                 <div key={e.id} className="py-3.5 flex items-start justify-between gap-4">
                   <div className="min-w-0">
-                    <div className="text-sm font-semibold text-slate-900 truncate">{e.title}</div>
-                    <div className="text-xs text-slate-500 mt-0.5">
+                    <div className="text-sm font-semibold text-slate-900 dark:text-slate-100 truncate">
+                      {e.title}
+                    </div>
+                    <div className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
                       {e.date} · {e.category} · {e.counterparty || e.account}
                     </div>
-                    {e.notes && <p className="text-xs text-slate-600 mt-1">{e.notes}</p>}
+                    {e.notes && (
+                      <p className="text-xs text-slate-600 dark:text-slate-400 mt-1">{e.notes}</p>
+                    )}
                   </div>
                   <DualAmount
                     usd={e.amountUSD}
                     tzs={e.amountTZS}
                     mode={displayMode}
                     align="right"
-                    className="text-sm font-semibold text-blue-700"
+                    className="text-sm font-semibold text-blue-700 dark:text-blue-400"
                   />
                 </div>
               ))}
