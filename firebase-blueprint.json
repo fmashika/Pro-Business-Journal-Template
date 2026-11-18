@@ -235,6 +235,10 @@
         "amountPaid": {
           "type": "number"
         },
+        "interestRatePct": {
+          "type": "number",
+          "description": "Annual interest rate percentage (APR, 0 if interest-free)."
+        },
         "exchangeRate": {
           "type": "number"
         },
@@ -271,6 +275,63 @@
         "createdAt",
         "updatedAt"
       ]
+    },
+    "CategoryBudget": {
+      "title": "Category Budget",
+      "description": "Monthly spending cap configured by the user for a specific journal spending category.",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "userId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "category": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 60
+        },
+        "currency": {
+          "type": "string",
+          "enum": ["USD", "TZS"]
+        },
+        "monthlyLimit": {
+          "type": "number"
+        },
+        "alertThresholdPct": {
+          "type": "number"
+        },
+        "notes": {
+          "type": "string",
+          "maxLength": 300
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "id",
+        "userId",
+        "category",
+        "currency",
+        "monthlyLimit",
+        "alertThresholdPct",
+        "notes",
+        "createdAt",
+        "updatedAt"
+      ]
     }
   },
   "firestore": {
@@ -289,6 +350,10 @@
     "/users/{userId}/debts/{debtId}": {
       "schema": { "$ref": "#/entities/DebtAccount" },
       "description": "Debt accounts and repayment milestone trackers owned by the user."
+    },
+    "/users/{userId}/budgets/{budgetId}": {
+      "schema": { "$ref": "#/entities/CategoryBudget" },
+      "description": "Monthly spending caps by category owned by the user."
     }
   }
 }

@@ -43,9 +43,22 @@ export interface DebtAccount {
   currency: CurrencyCode;
   totalPrincipal: number;
   amountPaid: number;
+  interestRatePct?: number;
   exchangeRate: number;
   dueDate: string; // YYYY-MM-DD
   status: 'active' | 'paid_off';
+  createdAt?: unknown;
+  updatedAt?: unknown;
+}
+
+export interface CategoryBudget {
+  id: string;
+  userId: string;
+  category: string;
+  currency: CurrencyCode;
+  monthlyLimit: number;
+  alertThresholdPct: number;
+  notes: string;
   createdAt?: unknown;
   updatedAt?: unknown;
 }

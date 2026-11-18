@@ -1,9 +1,10 @@
-import { DebtAccount, JournalEntry } from '../types/finance';
+import { CategoryBudget, DebtAccount, JournalEntry } from '../types/finance';
 import { convertToDual } from './currency';
 
 export interface SampleSeedBundle {
   debts: Omit<DebtAccount, 'userId' | 'createdAt' | 'updatedAt'>[];
   entries: Omit<JournalEntry, 'userId' | 'createdAt' | 'updatedAt'>[];
+  budgets: Omit<CategoryBudget, 'userId' | 'createdAt' | 'updatedAt'>[];
 }
 
 export function buildSampleSeedBundle(
@@ -19,6 +20,7 @@ export function buildSampleSeedBundle(
       currency: 'TZS',
       totalPrincipal: 6000000,
       amountPaid: 4200000,
+      interestRatePct: 0,
       exchangeRate,
       dueDate: `${currentMonthKey}-28`,
       status: 'active',
@@ -30,6 +32,7 @@ export function buildSampleSeedBundle(
       currency: 'USD',
       totalPrincipal: 2400,
       amountPaid: 1350,
+      interestRatePct: 14.5,
       exchangeRate,
       dueDate: '2027-02-15',
       status: 'active',
@@ -41,6 +44,7 @@ export function buildSampleSeedBundle(
       currency: 'TZS',
       totalPrincipal: 1200000,
       amountPaid: 1200000,
+      interestRatePct: 12,
       exchangeRate,
       dueDate: `${prevMonthKey}-25`,
       status: 'paid_off',
@@ -357,5 +361,40 @@ export function buildSampleSeedBundle(
     ),
   ];
 
-  return { debts, entries };
+  const budgets: SampleSeedBundle['budgets'] = [
+    {
+      id: 'budget_inventory_stock',
+      category: 'Inventory & Stock',
+      currency: 'TZS',
+      monthlyLimit: 2200000,
+      alertThresholdPct: 80,
+      notes: 'Monthly cap for wholesale dry goods and packaging restocks.',
+    },
+    {
+      id: 'budget_rent_utilities',
+      category: 'Rent & Utilities',
+      currency: 'TZS',
+      monthlyLimit: 1500000,
+      alertThresholdPct: 85,
+      notes: 'Warehouse lease, electricity, and water ceiling.',
+    },
+    {
+      id: 'budget_staff_labor',
+      category: 'Staff & Labor',
+      currency: 'TZS',
+      monthlyLimit: 900000,
+      alertThresholdPct: 80,
+      notes: 'Bi-weekly courier & warehouse assistant allowance cap.',
+    },
+    {
+      id: 'budget_transport_fuel',
+      category: 'Transport & Fuel',
+      currency: 'USD',
+      monthlyLimit: 220,
+      alertThresholdPct: 75,
+      notes: 'Local delivery fuel and fleet upkeep.',
+    },
+  ];
+
+  return { debts, entries, budgets };
 }

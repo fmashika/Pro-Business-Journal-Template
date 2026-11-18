@@ -32,6 +32,7 @@ interface EntryModalProps {
   }) => Promise<void>;
   initialEntry?: JournalEntry | null;
   presetType?: EntryType;
+  presetCategory?: string;
   presetAmountUsd?: number;
   presetEmergencyAction?: EmergencyAction;
   presetDebtId?: string;
@@ -47,6 +48,7 @@ export const EntryModal: React.FC<EntryModalProps> = ({
   onSave,
   initialEntry,
   presetType,
+  presetCategory,
   presetAmountUsd,
   presetEmergencyAction,
   presetDebtId,
@@ -93,7 +95,9 @@ export const EntryModal: React.FC<EntryModalProps> = ({
       setEmergencyAction(presetEmergencyAction || 'fund');
       setTitle(nextType === 'tithe' && presetAmountUsd ? `${titheRatePercent}% Tithe Settlement` : '');
       setCategory(
-        nextType === 'emergency' && presetEmergencyAction === 'use'
+        presetCategory
+          ? presetCategory
+          : nextType === 'emergency' && presetEmergencyAction === 'use'
           ? 'Equipment Breakdown'
           : ENTRY_TYPE_META[nextType].defaultCategories[0]
       );
@@ -109,6 +113,7 @@ export const EntryModal: React.FC<EntryModalProps> = ({
     isOpen,
     initialEntry,
     presetType,
+    presetCategory,
     presetAmountUsd,
     presetEmergencyAction,
     presetDebtId,
@@ -324,6 +329,11 @@ export const EntryModal: React.FC<EntryModalProps> = ({
                       {c}
                     </option>
                   ))}
+                  {category &&
+                    !ENTRY_TYPE_META[type].defaultCategories.includes(category) &&
+                    !FINANCIAL_MARKET_CATEGORIES.includes(category) && (
+                      <option value={category}>{category}</option>
+                    )}
                 </optgroup>
                 {type !== 'investment' && (
                   <optgroup label="Financial Markets &amp; Trading">

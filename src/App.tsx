@@ -29,8 +29,11 @@ import {
   Settings,
   ShieldCheck,
   Sun,
+  Target,
   X,
 } from 'lucide-react';
+import { BudgetModal } from './components/BudgetModal';
+import { BudgetingView } from './components/BudgetingView';
 import { DailyJournalView } from './components/DailyJournalView';
 import { DebtModal } from './components/DebtModal';
 import { EntryModal } from './components/EntryModal';
@@ -44,6 +47,7 @@ import { StewardshipView } from './components/StewardshipView';
 import {
   computeDailyCashFlowSeries,
   computeDayOfWeekPatterns,
+  computeMonthlyBudgetReport,
   computeMonthlySummary,
   computeOverallHealth,
   getMonthLabel,
@@ -61,6 +65,7 @@ import {
 } from './lib/firebase';
 import { buildSampleSeedBundle } from './lib/sampleData';
 import {
+  CategoryBudget,
   CurrencyCode,
   DebtAccount,
   DisplayCurrencyMode,
@@ -70,11 +75,12 @@ import {
   UserPreferences,
 } from './types/finance';
 
-type NavTab = 'overview' | 'journal' | 'stewardship' | 'reserves' | 'settings';
+type NavTab = 'overview' | 'journal' | 'budgeting' | 'stewardship' | 'reserves' | 'settings';
 
 const NAV_ITEMS: { key: NavTab; label: string; icon: React.FC<{ className?: string }> }[] = [
   { key: 'overview', label: 'Overview', icon: LayoutDashboard },
   { key: 'journal', label: 'Daily Journal', icon: BookOpen },
+  { key: 'budgeting', label: 'Budgeting', icon: Target },
   { key: 'stewardship', label: 'Tithe & Offering', icon: HeartHandshake },
   { key: 'reserves', label: 'Reserves & Debt', icon: ShieldCheck },
   { key: 'settings', label: 'Settings', icon: Settings },
@@ -136,12 +142,14 @@ function MainWorkspace() {
   const [displayMode, setDisplayMode] = useState<DisplayCurrencyMode>('BOTH');
   const [entries, setEntries] = useState<JournalEntry[]>([]);
   const [debts, setDebts] = useState<DebtAccount[]>([]);
+  const [budgets, setBudgets] = useState<CategoryBudget[]>([]);
   const [seedingSample, setSeedingSample] = useState(false);
 
   // Entry modal state
   const [entryModalOpen, setEntryModalOpen] = useState(false);
   const [editingEntry, setEditingEntry] = useState<JournalEntry | null>(null);
   const [presetType, setPresetType] = useState<EntryType | undefined>(undefined);
+  const [presetCategory, setPresetCategory] = useState<string | undefined>(undefined);
   const [presetAmountUsd, setPresetAmountUsd] = useState<number | undefined>(undefined);
   const [presetEmergencyAction, setPresetEmergencyAction] = useState<EmergencyAction | undefined>(
     undefined
@@ -150,6 +158,12 @@ function MainWorkspace() {
 
   // Debt modal state
   const [debtModalOpen, setDebtModalOpen] = useState(false);
+  const [editingDebt, setEditingDebt] = useState<DebtAccount | null>(null);
+
+  // Budget modal state
+  const [budgetModalOpen, setBudgetModalOpen] = useState(false);
+  const [editingBudget, setEditingBudget] = useState<CategoryBudget | null>(null);
+  const [presetBudgetCategory, setPresetBudgetCategory] = useState<string | undefined>(undefined);
 
   useEffect(() => {
     testConnection();
@@ -162,6 +176,7 @@ function MainWorkspace() {
       } else {
         setEntries([]);
         setDebts([]);
+        setBudgets([]);
         setLoadingData(false);
       }
     });
@@ -174,6 +189,7 @@ function MainWorkspace() {
     const bundle = buildSampleSeedBundle(curMonth, prevMonth, 2650);
     setEntries(bundle.entries.map((e) => ({ ...e, userId: 'guest' })));
     setDebts(bundle.debts.map((d) => ({ ...d, userId: 'guest' })));
+    setBudgets(bundle.budgets.map((b) => ({ ...b, userId: 'guest' })));
     setPreferences({
       userId: 'guest',
       businessName: 'Pro Business Journal Template',
@@ -194,6 +210,7 @@ function MainWorkspace() {
     setIsGuest(false);
     setEntries([]);
     setDebts([]);
+    setBudgets([]);
     setGuestPromptAction(null);
   };
 
@@ -297,11 +314,26 @@ function MainWorkspace() {
       }
     );
 
+    const budgetsPath = `users/${uid}/budgets`;
+    const budgetsQuery = query(collection(db, 'users', uid, 'budgets'), where('userId', '==', uid));
+    const unsubBudgets = onSnapshot(
+      budgetsQuery,
+      (snap) => {
+        if (!active) return;
+        const list: CategoryBudget[] = snap.docs.map((d) => d.data() as CategoryBudget);
+        setBudgets(list);
+      },
+      (error) => {
+        handleFirestoreError(error, OperationType.LIST, budgetsPath);
+      }
+    );
+
     return () => {
       active = false;
       unsubPref();
       unsubEntries();
       unsubDebts();
+      unsubBudgets();
     };
   }, [authReady, user]);
 
@@ -332,11 +364,31 @@ function MainWorkspace() {
     [entries, monthKey]
   );
 
+  const budgetReport = useMemo(
+    () =>
+      computeMonthlyBudgetReport(
+        entries,
+        budgets,
+        monthKey,
+        preferences.exchangeRateTzsPerUsd
+      ),
+    [entries, budgets, monthKey, preferences.exchangeRateTzsPerUsd]
+  );
+
+  const journalSpendingCategories = useMemo(
+    () =>
+      Array.from(
+        new Set(entries.filter((e) => e.type === 'spending').map((e) => e.category))
+      ),
+    [entries]
+  );
+
   const openNewEntry = (
     typePreset?: EntryType,
     amountUsdPreset?: number,
     emergencyPreset?: EmergencyAction,
-    debtIdPreset?: string
+    debtIdPreset?: string,
+    categoryPreset?: string
   ) => {
     if (isGuest || !user) {
       setGuestPromptAction('record a new transaction');
@@ -344,6 +396,7 @@ function MainWorkspace() {
     }
     setEditingEntry(null);
     setPresetType(typePreset);
+    setPresetCategory(categoryPreset);
     setPresetAmountUsd(amountUsdPreset);
     setPresetEmergencyAction(emergencyPreset);
     setPresetDebtId(debtIdPreset);
@@ -357,10 +410,49 @@ function MainWorkspace() {
     }
     setEditingEntry(entry);
     setPresetType(undefined);
+    setPresetCategory(undefined);
     setPresetAmountUsd(undefined);
     setPresetEmergencyAction(undefined);
     setPresetDebtId(undefined);
     setEntryModalOpen(true);
+  };
+
+  const openNewBudget = (categoryPreset?: string) => {
+    if (isGuest || !user) {
+      setGuestPromptAction('set a monthly category budget cap');
+      return;
+    }
+    setEditingBudget(null);
+    setPresetBudgetCategory(categoryPreset);
+    setBudgetModalOpen(true);
+  };
+
+  const openEditBudget = (budget: CategoryBudget) => {
+    if (isGuest || !user) {
+      setGuestPromptAction('edit a monthly category budget cap');
+      return;
+    }
+    setEditingBudget(budget);
+    setPresetBudgetCategory(undefined);
+    setBudgetModalOpen(true);
+  };
+
+  const openNewDebt = () => {
+    if (isGuest || !user) {
+      setGuestPromptAction('add a debt account');
+      return;
+    }
+    setEditingDebt(null);
+    setDebtModalOpen(true);
+  };
+
+  const openEditDebt = (debt: DebtAccount) => {
+    if (isGuest || !user) {
+      setGuestPromptAction('edit a debt account');
+      return;
+    }
+    setEditingDebt(debt);
+    setDebtModalOpen(true);
   };
 
   const handleSaveEntry = async (payload: {
@@ -493,22 +585,45 @@ function MainWorkspace() {
   };
 
   const handleSaveDebt = async (payload: {
+    id?: string;
     creditor: string;
     purpose: string;
     currency: CurrencyCode;
     totalPrincipal: number;
     amountPaid: number;
+    interestRatePct: number;
     dueDate: string;
   }) => {
     if (isGuest || !user) {
-      setGuestPromptAction('add a debt account');
+      setGuestPromptAction(payload.id ? 'edit a debt account' : 'add a debt account');
       return;
     }
     const uid = user.uid;
-    const debtId = makeId('debt');
+    const debtId = payload.id || makeId('debt');
+    const debtRef = doc(db, 'users', uid, 'debts', debtId);
     const status = payload.amountPaid >= payload.totalPrincipal ? 'paid_off' : 'active';
+
+    if (payload.id) {
+      try {
+        await updateDoc(debtRef, {
+          creditor: payload.creditor,
+          purpose: payload.purpose,
+          currency: payload.currency,
+          totalPrincipal: payload.totalPrincipal,
+          amountPaid: payload.amountPaid,
+          interestRatePct: payload.interestRatePct,
+          dueDate: payload.dueDate,
+          status,
+          updatedAt: serverTimestamp(),
+        });
+      } catch (err) {
+        handleFirestoreError(err, OperationType.UPDATE, `users/${uid}/debts/${debtId}`);
+      }
+      return;
+    }
+
     try {
-      await setDoc(doc(db, 'users', uid, 'debts', debtId), {
+      await setDoc(debtRef, {
         id: debtId,
         userId: uid,
         creditor: payload.creditor,
@@ -516,6 +631,7 @@ function MainWorkspace() {
         currency: payload.currency,
         totalPrincipal: payload.totalPrincipal,
         amountPaid: payload.amountPaid,
+        interestRatePct: payload.interestRatePct,
         exchangeRate: preferences.exchangeRateTzsPerUsd,
         dueDate: payload.dueDate,
         status,
@@ -537,6 +653,68 @@ function MainWorkspace() {
       await deleteDoc(doc(db, 'users', uid, 'debts', debtId));
     } catch (err) {
       handleFirestoreError(err, OperationType.DELETE, `users/${uid}/debts/${debtId}`);
+    }
+  };
+
+  const handleSaveBudget = async (payload: {
+    id?: string;
+    category: string;
+    currency: CurrencyCode;
+    monthlyLimit: number;
+    alertThresholdPct: number;
+    notes: string;
+  }) => {
+    if (isGuest || !user) {
+      setGuestPromptAction('save a monthly budget cap');
+      return;
+    }
+    const uid = user.uid;
+    const budgetId = payload.id || makeId('budget');
+    const budgetRef = doc(db, 'users', uid, 'budgets', budgetId);
+
+    if (payload.id) {
+      try {
+        await updateDoc(budgetRef, {
+          category: payload.category,
+          currency: payload.currency,
+          monthlyLimit: payload.monthlyLimit,
+          alertThresholdPct: payload.alertThresholdPct,
+          notes: payload.notes,
+          updatedAt: serverTimestamp(),
+        });
+      } catch (err) {
+        handleFirestoreError(err, OperationType.UPDATE, `users/${uid}/budgets/${budgetId}`);
+      }
+      return;
+    }
+
+    try {
+      await setDoc(budgetRef, {
+        id: budgetId,
+        userId: uid,
+        category: payload.category,
+        currency: payload.currency,
+        monthlyLimit: payload.monthlyLimit,
+        alertThresholdPct: payload.alertThresholdPct,
+        notes: payload.notes,
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+      });
+    } catch (err) {
+      handleFirestoreError(err, OperationType.CREATE, `users/${uid}/budgets/${budgetId}`);
+    }
+  };
+
+  const handleDeleteBudget = async (budget: CategoryBudget) => {
+    if (isGuest || !user) {
+      setGuestPromptAction('delete a monthly budget cap');
+      return;
+    }
+    const uid = user.uid;
+    try {
+      await deleteDoc(doc(db, 'users', uid, 'budgets', budget.id));
+    } catch (err) {
+      handleFirestoreError(err, OperationType.DELETE, `users/${uid}/budgets/${budget.id}`);
     }
   };
 
@@ -589,6 +767,14 @@ function MainWorkspace() {
           updatedAt: serverTimestamp(),
         });
       }
+      for (const b of bundle.budgets) {
+        batch.set(doc(db, 'users', uid, 'budgets', b.id), {
+          ...b,
+          userId: uid,
+          createdAt: serverTimestamp(),
+          updatedAt: serverTimestamp(),
+        });
+      }
       await batch.commit();
     } catch (err) {
       handleFirestoreError(err, OperationType.WRITE, `users/${uid}/entries`);
@@ -610,6 +796,9 @@ function MainWorkspace() {
       }
       for (const d of debts) {
         batch.delete(doc(db, 'users', uid, 'debts', d.id));
+      }
+      for (const b of budgets) {
+        batch.delete(doc(db, 'users', uid, 'budgets', b.id));
       }
       await batch.commit();
     } catch (err) {
@@ -965,6 +1154,21 @@ function MainWorkspace() {
                 />
               )}
 
+              {activeTab === 'budgeting' && (
+                <BudgetingView
+                  monthKey={monthKey}
+                  report={budgetReport}
+                  preferences={preferences}
+                  displayMode={displayMode}
+                  onOpenNewBudget={openNewBudget}
+                  onEditBudget={openEditBudget}
+                  onDeleteBudget={handleDeleteBudget}
+                  onLogSpendingForCategory={(category) =>
+                    openNewEntry('spending', undefined, undefined, undefined, category)
+                  }
+                />
+              )}
+
               {activeTab === 'stewardship' && (
                 <StewardshipView
                   monthKey={monthKey}
@@ -985,13 +1189,8 @@ function MainWorkspace() {
                   preferences={preferences}
                   displayMode={displayMode}
                   onOpenNewEntry={(t, amt, em, dId) => openNewEntry(t, amt, em, dId)}
-                  onOpenNewDebt={() => {
-                    if (isGuest || !user) {
-                      setGuestPromptAction('add a debt account');
-                      return;
-                    }
-                    setDebtModalOpen(true);
-                  }}
+                  onOpenNewDebt={openNewDebt}
+                  onEditDebt={openEditDebt}
                   onDeleteDebt={handleDeleteDebt}
                 />
               )}
@@ -1020,6 +1219,7 @@ function MainWorkspace() {
         onSave={handleSaveEntry}
         initialEntry={editingEntry}
         presetType={presetType}
+        presetCategory={presetCategory}
         presetAmountUsd={presetAmountUsd}
         presetEmergencyAction={presetEmergencyAction}
         presetDebtId={presetDebtId}
@@ -1033,9 +1233,26 @@ function MainWorkspace() {
 
       <DebtModal
         isOpen={debtModalOpen}
-        onClose={() => setDebtModalOpen(false)}
+        onClose={() => {
+          setDebtModalOpen(false);
+          setEditingDebt(null);
+        }}
         onSave={handleSaveDebt}
         defaultDueDate={`${monthKey}-28`}
+        initialDebt={editingDebt}
+        entries={entries}
+        exchangeRate={preferences.exchangeRateTzsPerUsd}
+      />
+
+      <BudgetModal
+        isOpen={budgetModalOpen}
+        onClose={() => setBudgetModalOpen(false)}
+        onSave={handleSaveBudget}
+        initialBudget={editingBudget}
+        presetCategory={presetBudgetCategory}
+        existingCategories={budgets.map((b) => b.category)}
+        journalCategories={journalSpendingCategories}
+        exchangeRate={preferences.exchangeRateTzsPerUsd}
       />
 
       <GuestUpgradeModal

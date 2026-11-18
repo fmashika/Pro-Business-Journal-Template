@@ -1,4 +1,11 @@
-import { DebtAccount, JournalEntry, UserPreferences } from '../types/finance';
+import {
+  CategoryBudget,
+  CurrencyCode,
+  DebtAccount,
+  JournalEntry,
+  UserPreferences,
+} from '../types/finance';
+import { convertToDual } from './currency';
 
 export interface DualTotal {
   usd: number;
@@ -66,6 +73,72 @@ export interface OverallHealthMetrics {
   totalDebtPaid: DualTotal;
   totalDebtPrincipal: DualTotal;
   debtPayoffPct: number;
+}
+
+export type BudgetStatus = 'on_track' | 'near_limit' | 'over_budget';
+
+export interface BudgetComparisonRow {
+  budget: CategoryBudget;
+  capDual: DualTotal;
+  actualDual: DualTotal;
+  remainingDual: DualTotal;
+  utilizationPct: number;
+  status: BudgetStatus;
+  txCount: number;
+}
+
+export interface UncappedSpendingCategory {
+  category: string;
+  actualDual: DualTotal;
+  txCount: number;
+}
+
+export interface MonthlyBudgetReport {
+  monthKey: string;
+  rows: BudgetComparisonRow[];
+  uncappedCategories: UncappedSpendingCategory[];
+  totalBudgeted: DualTotal;
+  totalActualAllSpending: DualTotal;
+  totalActualCapped: DualTotal;
+  totalActualUncapped: DualTotal;
+  remainingCappedHeadroom: DualTotal;
+  overallUtilizationPct: number;
+  onTrackCount: number;
+  nearLimitCount: number;
+  overBudgetCount: number;
+}
+
+export interface DebtPaymentHabit {
+  overallMonthlyAvgInCurrency: number;
+  overallPaymentCount: number;
+  overallActiveMonths: number;
+  overallTotalPaidInCurrency: number;
+  debtSpecificMonthlyAvgInCurrency: number;
+  debtSpecificPaymentCount: number;
+  debtSpecificActiveMonths: number;
+  debtSpecificTotalPaidInCurrency: number;
+  recommendedMonthlyPayment: number;
+  recommendedSource: 'debt_specific' | 'overall_journal' | 'none';
+}
+
+export interface PayoffProjection {
+  status:
+    | 'paid_off'
+    | 'projected'
+    | 'insufficient_payment'
+    | 'no_payment_habit'
+    | 'beyond_horizon';
+  remainingBalance: number;
+  monthlyPaymentUsed: number;
+  annualInterestRatePct: number;
+  monthsToPayoff: number | null;
+  projectedPayoffDate: string | null; // YYYY-MM-DD
+  projectedPayoffMonthLabel: string | null; // e.g. "May 2027"
+  estimatedTotalInterest: number;
+  estimatedTotalPayoffCost: number;
+  firstMonthInterest: number;
+  dueDateComparison: 'on_or_before' | 'after' | 'already_paid' | null;
+  monthsDeltaVsDueDate: number | null; // negative = early, positive = late
 }
 
 function zeroDual(): DualTotal {
@@ -532,4 +605,404 @@ export function exportMonthlySummaryToCSV(
   link.click();
   document.body.removeChild(link);
   URL.revokeObjectURL(url);
+}
+
+export function computeMonthlyBudgetReport(
+  entries: JournalEntry[],
+  budgets: CategoryBudget[],
+  monthKey: string,
+  exchangeRate = 2650
+): MonthlyBudgetReport {
+  const rate = exchangeRate > 0 ? exchangeRate : 2650;
+  const spendingByCategory = new Map<string, { usd: number; tzs: number; count: number }>();
+  let totalActualAllSpending = zeroDual();
+
+  for (const e of entries) {
+    if (e.monthKey !== monthKey || e.type !== 'spending') continue;
+    totalActualAllSpending = addDual(totalActualAllSpending, e.amountUSD, e.amountTZS);
+    const cur = spendingByCategory.get(e.category) || { usd: 0, tzs: 0, count: 0 };
+    cur.usd = Math.round((cur.usd + e.amountUSD) * 100) / 100;
+    cur.tzs = Math.round(cur.tzs + e.amountTZS);
+    cur.count += 1;
+    spendingByCategory.set(e.category, cur);
+  }
+
+  const budgetedCategories = new Set<string>();
+  let totalBudgeted = zeroDual();
+  let totalActualCapped = zeroDual();
+  let onTrackCount = 0;
+  let nearLimitCount = 0;
+  let overBudgetCount = 0;
+
+  const rows: BudgetComparisonRow[] = budgets
+    .map((budget) => {
+      budgetedCategories.add(budget.category.toLowerCase());
+      const capConverted = convertToDual(budget.monthlyLimit, budget.currency, rate);
+      const capDual: DualTotal = {
+        usd: capConverted.amountUSD,
+        tzs: capConverted.amountTZS,
+      };
+      const spent = spendingByCategory.get(budget.category) || { usd: 0, tzs: 0, count: 0 };
+      const actualDual: DualTotal = { usd: spent.usd, tzs: spent.tzs };
+      const remainingDual: DualTotal = {
+        usd: Math.round((capDual.usd - actualDual.usd) * 100) / 100,
+        tzs: Math.round(capDual.tzs - actualDual.tzs),
+      };
+      const utilizationPct =
+        capDual.usd > 0 ? Math.round((actualDual.usd / capDual.usd) * 1000) / 10 : 0;
+
+      let status: BudgetStatus = 'on_track';
+      if (utilizationPct > 100) {
+        status = 'over_budget';
+        overBudgetCount += 1;
+      } else if (utilizationPct >= budget.alertThresholdPct) {
+        status = 'near_limit';
+        nearLimitCount += 1;
+      } else {
+        onTrackCount += 1;
+      }
+
+      totalBudgeted = addDual(totalBudgeted, capDual.usd, capDual.tzs);
+      totalActualCapped = addDual(totalActualCapped, actualDual.usd, actualDual.tzs);
+
+      return {
+        budget,
+        capDual,
+        actualDual,
+        remainingDual,
+        utilizationPct,
+        status,
+        txCount: spent.count,
+      };
+    })
+    .sort((a, b) => b.utilizationPct - a.utilizationPct);
+
+  const uncappedCategories: UncappedSpendingCategory[] = [];
+  let totalActualUncapped = zeroDual();
+
+  for (const [category, spent] of spendingByCategory.entries()) {
+    if (!budgetedCategories.has(category.toLowerCase())) {
+      uncappedCategories.push({
+        category,
+        actualDual: { usd: spent.usd, tzs: spent.tzs },
+        txCount: spent.count,
+      });
+      totalActualUncapped = addDual(totalActualUncapped, spent.usd, spent.tzs);
+    }
+  }
+  uncappedCategories.sort((a, b) => b.actualDual.usd - a.actualDual.usd);
+
+  const remainingCappedHeadroom: DualTotal = {
+    usd: Math.round((totalBudgeted.usd - totalActualCapped.usd) * 100) / 100,
+    tzs: Math.round(totalBudgeted.tzs - totalActualCapped.tzs),
+  };
+
+  const overallUtilizationPct =
+    totalBudgeted.usd > 0
+      ? Math.round((totalActualCapped.usd / totalBudgeted.usd) * 1000) / 10
+      : 0;
+
+  return {
+    monthKey,
+    rows,
+    uncappedCategories,
+    totalBudgeted,
+    totalActualAllSpending,
+    totalActualCapped,
+    totalActualUncapped,
+    remainingCappedHeadroom,
+    overallUtilizationPct,
+    onTrackCount,
+    nearLimitCount,
+    overBudgetCount,
+  };
+}
+
+export function exportMonthlyBudgetToCSV(
+  report: MonthlyBudgetReport,
+  preferences: UserPreferences
+): void {
+  const escapeCsv = (val: string | number | undefined) => {
+    const s = String(val ?? '');
+    if (s.includes(',') || s.includes('"') || s.includes('\n')) {
+      return `"${s.replace(/"/g, '""')}"`;
+    }
+    return s;
+  };
+
+  const rows: (string | number)[][] = [
+    ['Journal Name', preferences.businessName, '', '', '', '', '', ''],
+    ['Budget Period', getMonthLabel(report.monthKey), '', '', '', '', '', ''],
+    ['Exchange Rate (TZS/USD)', preferences.exchangeRateTzsPerUsd, '', '', '', '', '', ''],
+    ['', '', '', '', '', '', '', ''],
+    [
+      'Category',
+      'Cap Currency',
+      'Monthly Cap (USD)',
+      'Monthly Cap (TZS)',
+      'Actual Spent (USD)',
+      'Actual Spent (TZS)',
+      'Remaining / Over (USD)',
+      'Utilization %',
+      'Status',
+    ],
+    ...report.rows.map((r) => [
+      r.budget.category,
+      r.budget.currency,
+      r.capDual.usd.toFixed(2),
+      Math.round(r.capDual.tzs),
+      r.actualDual.usd.toFixed(2),
+      Math.round(r.actualDual.tzs),
+      r.remainingDual.usd.toFixed(2),
+      `${r.utilizationPct}%`,
+      r.status === 'over_budget'
+        ? 'Over Budget'
+        : r.status === 'near_limit'
+        ? 'Near Limit'
+        : 'On Track',
+    ]),
+  ];
+
+  const csvContent = rows.map((r) => r.map(escapeCsv).join(',')).join('\n');
+  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = `pro-business-budget-${report.monthKey}.csv`;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(url);
+}
+
+function entryAmountInCurrency(
+  entry: JournalEntry,
+  targetCurrency: CurrencyCode,
+  exchangeRate: number
+): number {
+  if (entry.currency === targetCurrency) {
+    return entry.amount;
+  }
+  const dual = convertToDual(entry.amount, entry.currency, entry.exchangeRate || exchangeRate);
+  return targetCurrency === 'USD' ? dual.amountUSD : dual.amountTZS;
+}
+
+function monthSpanCount(monthKeys: string[]): number {
+  if (monthKeys.length === 0) return 0;
+  const sorted = [...monthKeys].sort();
+  const [startY, startM] = sorted[0].split('-').map(Number);
+  const [endY, endM] = sorted[sorted.length - 1].split('-').map(Number);
+  if (!startY || !startM || !endY || !endM) return new Set(monthKeys).size;
+  return Math.max(1, (endY - startY) * 12 + (endM - startM) + 1);
+}
+
+function roundForCurrency(value: number, currency: CurrencyCode): number {
+  return currency === 'USD' ? Math.round(value * 100) / 100 : Math.round(value);
+}
+
+export function computeDebtPaymentHabit(
+  entries: JournalEntry[],
+  targetCurrency: CurrencyCode,
+  exchangeRate = 2650,
+  debtId?: string
+): DebtPaymentHabit {
+  const rate = exchangeRate > 0 ? exchangeRate : 2650;
+  const debtEntries = entries.filter((e) => e.type === 'debt');
+
+  const overallMonths: string[] = [];
+  let overallTotal = 0;
+  for (const e of debtEntries) {
+    overallTotal += entryAmountInCurrency(e, targetCurrency, rate);
+    if (e.monthKey) overallMonths.push(e.monthKey);
+  }
+  const overallSpan = monthSpanCount(overallMonths);
+  const overallDistinctMonths = new Set(overallMonths).size;
+  const overallMonthlyAvgInCurrency =
+    overallSpan > 0 ? roundForCurrency(overallTotal / overallSpan, targetCurrency) : 0;
+
+  const specificEntries = debtId ? debtEntries.filter((e) => e.debtId === debtId) : [];
+  const specificMonths: string[] = [];
+  let specificTotal = 0;
+  for (const e of specificEntries) {
+    specificTotal += entryAmountInCurrency(e, targetCurrency, rate);
+    if (e.monthKey) specificMonths.push(e.monthKey);
+  }
+  const specificSpan = monthSpanCount(specificMonths);
+  const specificDistinctMonths = new Set(specificMonths).size;
+  const debtSpecificMonthlyAvgInCurrency =
+    specificSpan > 0 ? roundForCurrency(specificTotal / specificSpan, targetCurrency) : 0;
+
+  let recommendedMonthlyPayment = 0;
+  let recommendedSource: DebtPaymentHabit['recommendedSource'] = 'none';
+  if (specificEntries.length > 0 && debtSpecificMonthlyAvgInCurrency > 0) {
+    recommendedMonthlyPayment = debtSpecificMonthlyAvgInCurrency;
+    recommendedSource = 'debt_specific';
+  } else if (debtEntries.length > 0 && overallMonthlyAvgInCurrency > 0) {
+    recommendedMonthlyPayment = overallMonthlyAvgInCurrency;
+    recommendedSource = 'overall_journal';
+  }
+
+  return {
+    overallMonthlyAvgInCurrency,
+    overallPaymentCount: debtEntries.length,
+    overallActiveMonths: overallDistinctMonths,
+    overallTotalPaidInCurrency: roundForCurrency(overallTotal, targetCurrency),
+    debtSpecificMonthlyAvgInCurrency,
+    debtSpecificPaymentCount: specificEntries.length,
+    debtSpecificActiveMonths: specificDistinctMonths,
+    debtSpecificTotalPaidInCurrency: roundForCurrency(specificTotal, targetCurrency),
+    recommendedMonthlyPayment,
+    recommendedSource,
+  };
+}
+
+function addCalendarMonths(baseDate: Date, monthsToAdd: number): Date {
+  const targetYear = baseDate.getUTCFullYear();
+  const targetMonth = baseDate.getUTCMonth() + monthsToAdd;
+  const day = baseDate.getUTCDate();
+  const lastDayOfTargetMonth = new Date(Date.UTC(targetYear, targetMonth + 1, 0)).getUTCDate();
+  return new Date(Date.UTC(targetYear, targetMonth, Math.min(day, lastDayOfTargetMonth)));
+}
+
+export function computeProjectedPayoff(params: {
+  remainingBalance: number;
+  monthlyPayment: number;
+  annualInterestRatePct: number;
+  currency: CurrencyCode;
+  dueDate?: string;
+  asOfDate?: Date;
+}): PayoffProjection {
+  const {
+    remainingBalance,
+    monthlyPayment,
+    annualInterestRatePct,
+    currency,
+    dueDate,
+    asOfDate,
+  } = params;
+
+  const cleanRemaining = Math.max(0, remainingBalance);
+  const cleanRatePct = Math.max(0, annualInterestRatePct);
+  const monthlyRate = cleanRatePct / 100 / 12;
+  const firstMonthInterest = roundForCurrency(cleanRemaining * monthlyRate, currency);
+
+  if (cleanRemaining <= 0.005) {
+    return {
+      status: 'paid_off',
+      remainingBalance: 0,
+      monthlyPaymentUsed: monthlyPayment,
+      annualInterestRatePct: cleanRatePct,
+      monthsToPayoff: 0,
+      projectedPayoffDate: null,
+      projectedPayoffMonthLabel: 'Paid Off',
+      estimatedTotalInterest: 0,
+      estimatedTotalPayoffCost: 0,
+      firstMonthInterest: 0,
+      dueDateComparison: 'already_paid',
+      monthsDeltaVsDueDate: 0,
+    };
+  }
+
+  if (!Number.isFinite(monthlyPayment) || monthlyPayment <= 0) {
+    return {
+      status: 'no_payment_habit',
+      remainingBalance: roundForCurrency(cleanRemaining, currency),
+      monthlyPaymentUsed: 0,
+      annualInterestRatePct: cleanRatePct,
+      monthsToPayoff: null,
+      projectedPayoffDate: null,
+      projectedPayoffMonthLabel: null,
+      estimatedTotalInterest: 0,
+      estimatedTotalPayoffCost: roundForCurrency(cleanRemaining, currency),
+      firstMonthInterest,
+      dueDateComparison: null,
+      monthsDeltaVsDueDate: null,
+    };
+  }
+
+  if (monthlyRate > 0 && monthlyPayment <= cleanRemaining * monthlyRate + 1e-9) {
+    return {
+      status: 'insufficient_payment',
+      remainingBalance: roundForCurrency(cleanRemaining, currency),
+      monthlyPaymentUsed: monthlyPayment,
+      annualInterestRatePct: cleanRatePct,
+      monthsToPayoff: null,
+      projectedPayoffDate: null,
+      projectedPayoffMonthLabel: null,
+      estimatedTotalInterest: 0,
+      estimatedTotalPayoffCost: roundForCurrency(cleanRemaining, currency),
+      firstMonthInterest,
+      dueDateComparison: null,
+      monthsDeltaVsDueDate: null,
+    };
+  }
+
+  let balance = cleanRemaining;
+  let months = 0;
+  let totalInterest = 0;
+  const MAX_MONTHS = 600;
+
+  while (balance > 0.005 && months < MAX_MONTHS) {
+    const interest = balance * monthlyRate;
+    totalInterest += interest;
+    balance = balance + interest - monthlyPayment;
+    months += 1;
+  }
+
+  if (balance > 0.005) {
+    return {
+      status: 'beyond_horizon',
+      remainingBalance: roundForCurrency(cleanRemaining, currency),
+      monthlyPaymentUsed: monthlyPayment,
+      annualInterestRatePct: cleanRatePct,
+      monthsToPayoff: null,
+      projectedPayoffDate: null,
+      projectedPayoffMonthLabel: '> 50 yrs',
+      estimatedTotalInterest: roundForCurrency(totalInterest, currency),
+      estimatedTotalPayoffCost: roundForCurrency(cleanRemaining + totalInterest, currency),
+      firstMonthInterest,
+      dueDateComparison: 'after',
+      monthsDeltaVsDueDate: null,
+    };
+  }
+
+  const now = asOfDate || new Date();
+  const baseUtc = new Date(Date.UTC(now.getFullYear(), now.getMonth(), now.getDate()));
+  const payoffDt = addCalendarMonths(baseUtc, months);
+  const projectedPayoffDate = payoffDt.toISOString().slice(0, 10);
+  const projectedPayoffMonthLabel = payoffDt.toLocaleDateString('en-US', {
+    month: 'short',
+    year: 'numeric',
+    timeZone: 'UTC',
+  });
+
+  let dueDateComparison: PayoffProjection['dueDateComparison'] = null;
+  let monthsDeltaVsDueDate: number | null = null;
+  if (dueDate && /^\d{4}-\d{2}-\d{2}$/.test(dueDate)) {
+    const [dy, dm] = dueDate.split('-').map(Number);
+    const py = payoffDt.getUTCFullYear();
+    const pm = payoffDt.getUTCMonth() + 1;
+    const monthDiff = (py - dy) * 12 + (pm - dm);
+    monthsDeltaVsDueDate = monthDiff;
+    if (projectedPayoffDate <= dueDate || monthDiff <= 0) {
+      dueDateComparison = 'on_or_before';
+    } else {
+      dueDateComparison = 'after';
+    }
+  }
+
+  return {
+    status: 'projected',
+    remainingBalance: roundForCurrency(cleanRemaining, currency),
+    monthlyPaymentUsed: monthlyPayment,
+    annualInterestRatePct: cleanRatePct,
+    monthsToPayoff: months,
+    projectedPayoffDate,
+    projectedPayoffMonthLabel,
+    estimatedTotalInterest: roundForCurrency(totalInterest, currency),
+    estimatedTotalPayoffCost: roundForCurrency(cleanRemaining + totalInterest, currency),
+    firstMonthInterest,
+    dueDateComparison,
+    monthsDeltaVsDueDate,
+  };
 }

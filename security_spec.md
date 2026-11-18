@@ -2,11 +2,11 @@
 
 ## 1. Data Invariants
 1. **Strict Ownership & PII Isolation**: All user PII (`email`, `displayName`) lives exclusively in `/users/{userId}/private/profile` and is readable/writable only by the verified owner (`request.auth.uid == userId && request.auth.token.email_verified == true`).
-2. **Owner-Scoped Ledger**: Every `JournalEntry`, `DebtAccount`, and `UserPreferences` document must carry `userId == request.auth.uid`. Cross-user reads, lists, writes, or deletes are unconditionally denied.
+2. **Owner-Scoped Ledger**: Every `JournalEntry`, `DebtAccount`, `CategoryBudget`, and `UserPreferences` document must carry `userId == request.auth.uid`. Cross-user reads, lists, writes, or deletes are unconditionally denied.
 3. **Immutable Identity & Timestamps**: `userId`, `id`, and `createdAt` cannot be modified after creation; `createdAt` and `updatedAt` must equal `request.time`.
 4. **Relational Debt Integrity**: A `JournalEntry` with `type == 'debt'` and a `debtId` can only be created or updated if the referenced `/users/{userId}/debts/{debtId}` document exists.
 5. **Terminal Debt State Locking**: Once a `DebtAccount` reaches `status == 'paid_off'`, further payment updates are blocked.
-6. **Volumetric & Type Bounds**: Every string has explicit `.size()` bounds; numeric amounts and exchange rates must be strictly positive within valid numeric ranges; IDs match `^[a-zA-Z0-9_-]+$`.
+6. **Volumetric & Type Bounds**: Every string has explicit `.size()` bounds; numeric amounts, monthly budget caps, and exchange rates must be strictly positive within valid numeric ranges; optional debt `interestRatePct` is bounded to `0..200`; IDs match `^[a-zA-Z0-9_-]+$`.
 
 ## 2. The "Dirty Dozen" Adversarial Payloads
 1. **Shadow Field Injection**: Creating a `JournalEntry` with extra ghost field `isAdmin: true` or `verified: true` -> Rejected by `keys().hasOnly(...)`.

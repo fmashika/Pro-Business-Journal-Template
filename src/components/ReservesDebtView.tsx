@@ -1,6 +1,10 @@
 import React, { useState } from 'react';
-import { CheckCircle2, Plus, ShieldAlert, Trash2 } from 'lucide-react';
-import { OverallHealthMetrics } from '../lib/analytics';
+import { CalendarCheck2, CheckCircle2, Pencil, Plus, ShieldAlert, Trash2 } from 'lucide-react';
+import {
+  computeDebtPaymentHabit,
+  computeProjectedPayoff,
+  OverallHealthMetrics,
+} from '../lib/analytics';
 import { convertToDual, formatNativeCurrency } from '../lib/currency';
 import {
   DebtAccount,
@@ -23,6 +27,7 @@ interface ReservesDebtViewProps {
     presetDebtId?: string
   ) => void;
   onOpenNewDebt: () => void;
+  onEditDebt: (debt: DebtAccount) => void;
   onDeleteDebt: (debtId: string) => Promise<void>;
 }
 
@@ -36,6 +41,7 @@ export const ReservesDebtView: React.FC<ReservesDebtViewProps> = ({
   displayMode,
   onOpenNewEntry,
   onOpenNewDebt,
+  onEditDebt,
   onDeleteDebt,
 }) => {
   const [deletingDebtId, setDeletingDebtId] = useState<string | null>(null);
@@ -174,6 +180,25 @@ export const ReservesDebtView: React.FC<ReservesDebtViewProps> = ({
                 preferences.exchangeRateTzsPerUsd
               );
               const isPaidOff = debt.status === 'paid_off' || remaining <= 0.001;
+              const aprPct = debt.interestRatePct ?? 0;
+              const habit = !isPaidOff
+                ? computeDebtPaymentHabit(
+                    entries,
+                    debt.currency,
+                    preferences.exchangeRateTzsPerUsd,
+                    debt.id
+                  )
+                : null;
+              const projection =
+                !isPaidOff && habit && habit.recommendedMonthlyPayment > 0
+                  ? computeProjectedPayoff({
+                      remainingBalance: remaining,
+                      monthlyPayment: habit.recommendedMonthlyPayment,
+                      annualInterestRatePct: aprPct,
+                      currency: debt.currency,
+                      dueDate: debt.dueDate,
+                    })
+                  : null;
 
               return (
                 <div key={debt.id} className="py-5 first:pt-5 last:pb-1 space-y-3">
@@ -193,16 +218,34 @@ export const ReservesDebtView: React.FC<ReservesDebtViewProps> = ({
                         >
                           {isPaidOff ? 'Paid Off (100% Milestone)' : `Due ${debt.dueDate}`}
                         </span>
+                        {aprPct > 0 && (
+                          <>
+                            <span className="text-xs text-slate-400 dark:text-slate-500">·</span>
+                            <span className="text-xs font-mono tabular-nums text-slate-500 dark:text-slate-400">
+                              {aprPct}% APR
+                            </span>
+                          </>
+                        )}
                       </div>
                       <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
                         {debt.purpose || 'Tracked debt facility'} · Principal:{' '}
                         <span className="font-mono tabular-nums">
                           {formatNativeCurrency(debt.totalPrincipal, debt.currency)}
                         </span>
+                        {projection && projection.status === 'projected' && (
+                          <>
+                            {' · '}
+                            <span className="inline-flex items-center gap-1 text-emerald-700 dark:text-emerald-400 font-medium">
+                              <CalendarCheck2 className="w-3 h-3" />
+                              Proj. payoff {projection.projectedPayoffMonthLabel} (
+                              {projection.monthsToPayoff} mo)
+                            </span>
+                          </>
+                        )}
                       </p>
                     </div>
 
-                    <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-2 sm:gap-3">
                       <DualAmount
                         usd={remainingDual.amountUSD}
                         tzs={remainingDual.amountTZS}
@@ -217,6 +260,17 @@ export const ReservesDebtView: React.FC<ReservesDebtViewProps> = ({
                           className="px-3 py-1.5 text-xs font-semibold text-white bg-emerald-700 rounded-lg hover:bg-emerald-800 transition-colors cursor-pointer whitespace-nowrap"
                         >
                           Record Payment
+                        </button>
+                      )}
+                      {!isPaidOff && (
+                        <button
+                          type="button"
+                          onClick={() => onEditDebt(debt)}
+                          aria-label={`Edit debt ${debt.creditor}`}
+                          title="Edit debt & projected payoff"
+                          className="p-1.5 text-slate-400 dark:text-slate-500 hover:text-slate-800 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors cursor-pointer"
+                        >
+                          <Pencil className="w-4 h-4" />
                         </button>
                       )}
                       <button
