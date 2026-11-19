@@ -37,6 +37,7 @@ interface OverviewViewProps {
   preferences: UserPreferences;
   displayMode: DisplayCurrencyMode;
   onOpenNewEntry: (presetType?: JournalEntry['type'], presetAmountUsd?: number) => void;
+  onOpenStoryImport: () => void;
   onNavigate: (tab: 'journal' | 'stewardship' | 'reserves' | 'settings') => void;
   onLoadSampleData: () => Promise<void>;
   seedingSample: boolean;
@@ -53,6 +54,7 @@ export const OverviewView: React.FC<OverviewViewProps> = ({
   preferences,
   displayMode,
   onOpenNewEntry,
+  onOpenStoryImport,
   onNavigate,
   onLoadSampleData,
   seedingSample,
@@ -86,6 +88,14 @@ export const OverviewView: React.FC<OverviewViewProps> = ({
           >
             <Plus className="w-4 h-4" />
             Log First Entry
+          </button>
+          <button
+            type="button"
+            onClick={onOpenStoryImport}
+            className="inline-flex items-center gap-2 px-5 py-2.5 text-sm font-semibold text-slate-800 dark:text-slate-100 bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors cursor-pointer whitespace-nowrap"
+          >
+            <Sparkles className="w-4 h-4 text-emerald-700 dark:text-emerald-400" />
+            Write Story Entry
           </button>
           <button
             type="button"

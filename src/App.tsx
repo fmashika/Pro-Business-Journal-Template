@@ -28,6 +28,7 @@ import {
   Plus,
   Settings,
   ShieldCheck,
+  Sparkles,
   Sun,
   Target,
   X,
@@ -44,6 +45,7 @@ import { ReservesDebtView } from './components/ReservesDebtView';
 import { SettingsView } from './components/SettingsView';
 import { SignInGate } from './components/SignInGate';
 import { StewardshipView } from './components/StewardshipView';
+import { StoryImportModal } from './components/StoryImportModal';
 import {
   computeDailyCashFlowSeries,
   computeDayOfWeekPatterns,
@@ -164,6 +166,9 @@ function MainWorkspace() {
   const [budgetModalOpen, setBudgetModalOpen] = useState(false);
   const [editingBudget, setEditingBudget] = useState<CategoryBudget | null>(null);
   const [presetBudgetCategory, setPresetBudgetCategory] = useState<string | undefined>(undefined);
+
+  // Story import modal state
+  const [storyModalOpen, setStoryModalOpen] = useState(false);
 
   useEffect(() => {
     testConnection();
@@ -568,6 +573,105 @@ function MainWorkspace() {
       await setDoc(entryRef, docData);
     } catch (err) {
       handleFirestoreError(err, OperationType.CREATE, `users/${uid}/entries/${entryId}`);
+    }
+  };
+
+  const handleSaveStoryBatch = async (
+    items: Array<{
+      date: string;
+      type: EntryType;
+      emergencyAction?: EmergencyAction;
+      title: string;
+      category: string;
+      counterparty: string;
+      account: string;
+      currency: CurrencyCode;
+      amount: number;
+      exchangeRate: number;
+      debtId?: string;
+      notes: string;
+    }>
+  ) => {
+    if (isGuest || !user) {
+      setGuestPromptAction('save translated story entries');
+      return;
+    }
+    if (items.length === 0) return;
+
+    const uid = user.uid;
+    const batch = writeBatch(db);
+    const debtPaymentTotals = new Map<string, number>();
+
+    try {
+      items.forEach((payload, idx) => {
+        const entryId = makeId(`entry${idx}`);
+        const entryRef = doc(db, 'users', uid, 'entries', entryId);
+        const dual = convertToDual(payload.amount, payload.currency, payload.exchangeRate);
+        const entryMonthKey = payload.date.slice(0, 7);
+
+        const docData: Record<string, unknown> = {
+          id: entryId,
+          userId: uid,
+          date: payload.date,
+          monthKey: entryMonthKey,
+          type: payload.type,
+          title: payload.title.slice(0, 140),
+          category: payload.category.slice(0, 60),
+          counterparty: payload.counterparty.slice(0, 100),
+          account: payload.account.slice(0, 60),
+          currency: payload.currency,
+          amount: payload.amount,
+          exchangeRate: payload.exchangeRate,
+          amountUSD: dual.amountUSD,
+          amountTZS: dual.amountTZS,
+          notes: payload.notes.slice(0, 500),
+          createdAt: serverTimestamp(),
+          updatedAt: serverTimestamp(),
+        };
+
+        if (payload.type === 'emergency') {
+          docData.emergencyAction = payload.emergencyAction || 'fund';
+        }
+        if (payload.type === 'debt' && payload.debtId) {
+          const linkedDebt = debts.find((d) => d.id === payload.debtId);
+          if (linkedDebt) {
+            docData.debtId = payload.debtId;
+            if (linkedDebt.status !== 'paid_off') {
+              const paymentInDebtCurrency =
+                linkedDebt.currency === payload.currency
+                  ? payload.amount
+                  : linkedDebt.currency === 'USD'
+                  ? dual.amountUSD
+                  : dual.amountTZS;
+              debtPaymentTotals.set(
+                linkedDebt.id,
+                (debtPaymentTotals.get(linkedDebt.id) || 0) + paymentInDebtCurrency
+              );
+            }
+          }
+        }
+
+        batch.set(entryRef, docData);
+      });
+
+      for (const [debtId, addedPayment] of debtPaymentTotals.entries()) {
+        const linkedDebt = debts.find((d) => d.id === debtId);
+        if (!linkedDebt || linkedDebt.status === 'paid_off') continue;
+        const nextPaid = Math.min(
+          linkedDebt.totalPrincipal,
+          Math.round((linkedDebt.amountPaid + addedPayment) * 100) / 100
+        );
+        const nextStatus = nextPaid >= linkedDebt.totalPrincipal ? 'paid_off' : 'active';
+        batch.update(doc(db, 'users', uid, 'debts', linkedDebt.id), {
+          amountPaid: nextPaid,
+          status: nextStatus,
+          updatedAt: serverTimestamp(),
+        });
+      }
+
+      await batch.commit();
+    } catch (err) {
+      handleFirestoreError(err, OperationType.WRITE, `users/${uid}/entries`);
     }
   };
 
@@ -1078,6 +1182,16 @@ function MainWorkspace() {
 
               <button
                 type="button"
+                onClick={() => setStoryModalOpen(true)}
+                className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-semibold text-slate-800 dark:text-slate-100 bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors cursor-pointer whitespace-nowrap shrink-0"
+              >
+                <Sparkles className="w-3.5 h-3.5 text-emerald-700 dark:text-emerald-400" />
+                <span className="hidden sm:inline">Story Entry</span>
+                <span className="sm:hidden">Story</span>
+              </button>
+
+              <button
+                type="button"
                 onClick={() => openNewEntry()}
                 className="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold text-white bg-emerald-700 rounded-lg hover:bg-emerald-800 transition-colors cursor-pointer whitespace-nowrap shrink-0"
               >
@@ -1137,6 +1251,7 @@ function MainWorkspace() {
                   preferences={preferences}
                   displayMode={displayMode}
                   onOpenNewEntry={(t, amt) => openNewEntry(t, amt)}
+                  onOpenStoryImport={() => setStoryModalOpen(true)}
                   onNavigate={(tab) => setActiveTab(tab)}
                   onLoadSampleData={handleLoadSampleData}
                   seedingSample={seedingSample}
@@ -1149,6 +1264,7 @@ function MainWorkspace() {
                   entries={entries}
                   displayMode={displayMode}
                   onOpenNewEntry={(t) => openNewEntry(t)}
+                  onOpenStoryImport={() => setStoryModalOpen(true)}
                   onEditEntry={openEditEntry}
                   onDeleteEntry={handleDeleteEntry}
                 />
@@ -1253,6 +1369,18 @@ function MainWorkspace() {
         existingCategories={budgets.map((b) => b.category)}
         journalCategories={journalSpendingCategories}
         exchangeRate={preferences.exchangeRateTzsPerUsd}
+      />
+
+      <StoryImportModal
+        isOpen={storyModalOpen}
+        onClose={() => setStoryModalOpen(false)}
+        onSaveBatch={handleSaveStoryBatch}
+        defaultMonthKey={monthKey}
+        todayDate={todayStr}
+        defaultExchangeRate={preferences.exchangeRateTzsPerUsd}
+        titheRatePercent={preferences.titheRatePercent}
+        debts={debts}
+        isGuest={isGuest}
       />
 
       <GuestUpgradeModal

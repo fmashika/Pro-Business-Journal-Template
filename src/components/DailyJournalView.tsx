@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { Download, Pencil, Plus, Search, Trash2 } from 'lucide-react';
+import { Download, Pencil, Plus, Search, Sparkles, Trash2 } from 'lucide-react';
 import { exportMonthToCSV, getMonthLabel } from '../lib/analytics';
 import { formatNativeCurrency, formatTZS, formatUSD } from '../lib/currency';
 import {
@@ -16,6 +16,7 @@ interface DailyJournalViewProps {
   entries: JournalEntry[];
   displayMode: DisplayCurrencyMode;
   onOpenNewEntry: (presetType?: EntryType) => void;
+  onOpenStoryImport: () => void;
   onEditEntry: (entry: JournalEntry) => void;
   onDeleteEntry: (entry: JournalEntry) => Promise<void>;
 }
@@ -37,6 +38,7 @@ export const DailyJournalView: React.FC<DailyJournalViewProps> = ({
   entries,
   displayMode,
   onOpenNewEntry,
+  onOpenStoryImport,
   onEditEntry,
   onDeleteEntry,
 }) => {
@@ -140,6 +142,15 @@ export const DailyJournalView: React.FC<DailyJournalViewProps> = ({
 
             <button
               type="button"
+              onClick={onOpenStoryImport}
+              className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-semibold text-slate-800 dark:text-slate-100 bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors cursor-pointer whitespace-nowrap shrink-0"
+            >
+              <Sparkles className="w-3.5 h-3.5 text-emerald-700 dark:text-emerald-400" />
+              Story Entry
+            </button>
+
+            <button
+              type="button"
               onClick={() => onOpenNewEntry()}
               className="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold text-white bg-emerald-700 rounded-lg hover:bg-emerald-800 transition-colors cursor-pointer whitespace-nowrap shrink-0"
             >
@@ -179,14 +190,24 @@ export const DailyJournalView: React.FC<DailyJournalViewProps> = ({
               ? 'Try clearing your search or filter tabs to see all recorded transactions.'
               : 'Record your first daily business transaction, expense, saving, or tithe for this month.'}
           </p>
-          <button
-            type="button"
-            onClick={() => onOpenNewEntry()}
-            className="mt-5 inline-flex items-center gap-2 px-4 py-2 text-sm font-semibold text-white bg-emerald-700 rounded-lg hover:bg-emerald-800 transition-colors cursor-pointer whitespace-nowrap"
-          >
-            <Plus className="w-4 h-4" />
-            Log Journal Entry
-          </button>
+          <div className="mt-5 flex flex-wrap items-center justify-center gap-3">
+            <button
+              type="button"
+              onClick={onOpenStoryImport}
+              className="inline-flex items-center gap-2 px-4 py-2 text-sm font-semibold text-slate-800 dark:text-slate-100 bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors cursor-pointer whitespace-nowrap"
+            >
+              <Sparkles className="w-4 h-4 text-emerald-700 dark:text-emerald-400" />
+              Write Story Entry
+            </button>
+            <button
+              type="button"
+              onClick={() => onOpenNewEntry()}
+              className="inline-flex items-center gap-2 px-4 py-2 text-sm font-semibold text-white bg-emerald-700 rounded-lg hover:bg-emerald-800 transition-colors cursor-pointer whitespace-nowrap"
+            >
+              <Plus className="w-4 h-4" />
+              Log Journal Entry
+            </button>
+          </div>
         </div>
       ) : (
         <div className="space-y-4">
