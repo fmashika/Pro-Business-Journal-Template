@@ -1006,3 +1006,276 @@ export function computeProjectedPayoff(params: {
     monthsDeltaVsDueDate,
   };
 }
+
+export interface AnnualTrendMonthPoint {
+  monthIndex: number; // 1..12
+  monthKey: string; // YYYY-MM
+  monthLabel: string; // Jan..Dec
+  fullMonthLabel: string; // January 2026
+  savingsUSD: number;
+  savingsTZS: number;
+  spendingUSD: number;
+  spendingTZS: number;
+  debtReductionUSD: number;
+  debtReductionTZS: number;
+  incomeUSD: number;
+  incomeTZS: number;
+  cumulativeSavingsUSD: number;
+  cumulativeSavingsTZS: number;
+  cumulativeSpendingUSD: number;
+  cumulativeSpendingTZS: number;
+  cumulativeDebtReductionUSD: number;
+  cumulativeDebtReductionTZS: number;
+  cumulativeIncomeUSD: number;
+  cumulativeIncomeTZS: number;
+  entryCount: number;
+}
+
+export interface AnnualTrendsReport {
+  year: number;
+  points: AnnualTrendMonthPoint[];
+  totalSavings: DualTotal;
+  totalSpending: DualTotal;
+  totalDebtReduction: DualTotal;
+  totalIncome: DualTotal;
+  activeMonthsCount: number;
+  entryCount: number;
+  peakSpendingMonthLabel: string | null;
+  peakSavingsMonthLabel: string | null;
+}
+
+const SHORT_MONTH_NAMES = [
+  'Jan',
+  'Feb',
+  'Mar',
+  'Apr',
+  'May',
+  'Jun',
+  'Jul',
+  'Aug',
+  'Sep',
+  'Oct',
+  'Nov',
+  'Dec',
+];
+
+export function computeAnnualTrends(
+  entries: JournalEntry[],
+  year: number
+): AnnualTrendsReport {
+  const yearPrefix = `${year}-`;
+  const byMonth = new Map<
+    string,
+    {
+      savU: number;
+      savT: number;
+      spU: number;
+      spT: number;
+      debtU: number;
+      debtT: number;
+      incU: number;
+      incT: number;
+      count: number;
+    }
+  >();
+
+  let yearEntryCount = 0;
+
+  for (const e of entries) {
+    const mk = e.monthKey || e.date.slice(0, 7);
+    if (!mk.startsWith(yearPrefix)) continue;
+    yearEntryCount += 1;
+
+    const bucket = byMonth.get(mk) || {
+      savU: 0,
+      savT: 0,
+      spU: 0,
+      spT: 0,
+      debtU: 0,
+      debtT: 0,
+      incU: 0,
+      incT: 0,
+      count: 0,
+    };
+    bucket.count += 1;
+
+    if (e.type === 'saving') {
+      bucket.savU += e.amountUSD;
+      bucket.savT += e.amountTZS;
+    } else if (e.type === 'spending') {
+      bucket.spU += e.amountUSD;
+      bucket.spT += e.amountTZS;
+    } else if (e.type === 'debt') {
+      bucket.debtU += e.amountUSD;
+      bucket.debtT += e.amountTZS;
+    } else if (e.type === 'income') {
+      bucket.incU += e.amountUSD;
+      bucket.incT += e.amountTZS;
+    }
+
+    byMonth.set(mk, bucket);
+  }
+
+  const points: AnnualTrendMonthPoint[] = [];
+  let cumSavU = 0;
+  let cumSavT = 0;
+  let cumSpU = 0;
+  let cumSpT = 0;
+  let cumDebtU = 0;
+  let cumDebtT = 0;
+  let cumIncU = 0;
+  let cumIncT = 0;
+  let activeMonthsCount = 0;
+  let peakSpendingUSD = 0;
+  let peakSpendingMonthLabel: string | null = null;
+  let peakSavingsUSD = 0;
+  let peakSavingsMonthLabel: string | null = null;
+
+  for (let m = 1; m <= 12; m++) {
+    const monthKey = `${year}-${String(m).padStart(2, '0')}`;
+    const b = byMonth.get(monthKey) || {
+      savU: 0,
+      savT: 0,
+      spU: 0,
+      spT: 0,
+      debtU: 0,
+      debtT: 0,
+      incU: 0,
+      incT: 0,
+      count: 0,
+    };
+
+    if (b.count > 0) {
+      activeMonthsCount += 1;
+    }
+
+    const savU = Math.round(b.savU * 100) / 100;
+    const savT = Math.round(b.savT);
+    const spU = Math.round(b.spU * 100) / 100;
+    const spT = Math.round(b.spT);
+    const debtU = Math.round(b.debtU * 100) / 100;
+    const debtT = Math.round(b.debtT);
+    const incU = Math.round(b.incU * 100) / 100;
+    const incT = Math.round(b.incT);
+
+    cumSavU = Math.round((cumSavU + savU) * 100) / 100;
+    cumSavT = Math.round(cumSavT + savT);
+    cumSpU = Math.round((cumSpU + spU) * 100) / 100;
+    cumSpT = Math.round(cumSpT + spT);
+    cumDebtU = Math.round((cumDebtU + debtU) * 100) / 100;
+    cumDebtT = Math.round(cumDebtT + debtT);
+    cumIncU = Math.round((cumIncU + incU) * 100) / 100;
+    cumIncT = Math.round(cumIncT + incT);
+
+    const monthLabel = SHORT_MONTH_NAMES[m - 1];
+    if (spU > peakSpendingUSD) {
+      peakSpendingUSD = spU;
+      peakSpendingMonthLabel = monthLabel;
+    }
+    if (savU > peakSavingsUSD) {
+      peakSavingsUSD = savU;
+      peakSavingsMonthLabel = monthLabel;
+    }
+
+    points.push({
+      monthIndex: m,
+      monthKey,
+      monthLabel,
+      fullMonthLabel: getMonthLabel(monthKey),
+      savingsUSD: savU,
+      savingsTZS: savT,
+      spendingUSD: spU,
+      spendingTZS: spT,
+      debtReductionUSD: debtU,
+      debtReductionTZS: debtT,
+      incomeUSD: incU,
+      incomeTZS: incT,
+      cumulativeSavingsUSD: cumSavU,
+      cumulativeSavingsTZS: cumSavT,
+      cumulativeSpendingUSD: cumSpU,
+      cumulativeSpendingTZS: cumSpT,
+      cumulativeDebtReductionUSD: cumDebtU,
+      cumulativeDebtReductionTZS: cumDebtT,
+      cumulativeIncomeUSD: cumIncU,
+      cumulativeIncomeTZS: cumIncT,
+      entryCount: b.count,
+    });
+  }
+
+  return {
+    year,
+    points,
+    totalSavings: { usd: cumSavU, tzs: cumSavT },
+    totalSpending: { usd: cumSpU, tzs: cumSpT },
+    totalDebtReduction: { usd: cumDebtU, tzs: cumDebtT },
+    totalIncome: { usd: cumIncU, tzs: cumIncT },
+    activeMonthsCount,
+    entryCount: yearEntryCount,
+    peakSpendingMonthLabel,
+    peakSavingsMonthLabel,
+  };
+}
+
+export function exportAnnualTrendsToCSV(
+  report: AnnualTrendsReport,
+  preferences: UserPreferences
+): void {
+  const escapeCsv = (val: string | number | undefined) => {
+    const s = String(val ?? '');
+    if (s.includes(',') || s.includes('"') || s.includes('\n')) {
+      return `"${s.replace(/"/g, '""')}"`;
+    }
+    return s;
+  };
+
+  const rows: (string | number)[][] = [
+    ['Journal Name', preferences.businessName, '', '', '', '', '', '', '', '', '', ''],
+    ['Annual Trends Report', `${report.year} Calendar Year`, '', '', '', '', '', '', '', '', '', ''],
+    ['Exchange Rate (TZS/USD)', preferences.exchangeRateTzsPerUsd, '', '', '', '', '', '', '', '', '', ''],
+    ['', '', '', '', '', '', '', '', '', '', '', ''],
+    [
+      'Month',
+      'Month Key',
+      'Monthly Savings (USD)',
+      'Monthly Savings (TZS)',
+      'Cumulative Savings (USD)',
+      'Cumulative Savings (TZS)',
+      'Monthly Spending (USD)',
+      'Monthly Spending (TZS)',
+      'Cumulative Spending (USD)',
+      'Cumulative Spending (TZS)',
+      'Monthly Debt Reduction (USD)',
+      'Cumulative Debt Reduction (USD)',
+      'Cumulative Debt Reduction (TZS)',
+      'Entries Count',
+    ],
+    ...report.points.map((p) => [
+      p.fullMonthLabel,
+      p.monthKey,
+      p.savingsUSD.toFixed(2),
+      Math.round(p.savingsTZS),
+      p.cumulativeSavingsUSD.toFixed(2),
+      Math.round(p.cumulativeSavingsTZS),
+      p.spendingUSD.toFixed(2),
+      Math.round(p.spendingTZS),
+      p.cumulativeSpendingUSD.toFixed(2),
+      Math.round(p.cumulativeSpendingTZS),
+      p.debtReductionUSD.toFixed(2),
+      p.cumulativeDebtReductionUSD.toFixed(2),
+      Math.round(p.cumulativeDebtReductionTZS),
+      p.entryCount,
+    ]),
+  ];
+
+  const csvContent = rows.map((r) => r.map(escapeCsv).join(',')).join('\n');
+  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = `pro-business-annual-trends-${report.year}.csv`;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(url);
+}
+

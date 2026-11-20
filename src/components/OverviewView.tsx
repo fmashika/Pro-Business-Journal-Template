@@ -3,6 +3,7 @@ import {
   ArrowDownRight,
   ArrowUpRight,
   Calendar,
+  CheckCircle2,
   Download,
   Plus,
   Sparkles,
@@ -187,6 +188,29 @@ export const OverviewView: React.FC<OverviewViewProps> = ({
   ];
 
   const isPositiveNet = summary.netCashFlow.usd >= 0;
+  const rate =
+    preferences.exchangeRateTzsPerUsd > 0 ? preferences.exchangeRateTzsPerUsd : 2650;
+  const savingsGoalUsd = Math.max(0, preferences.monthlySavingsGoalUsd || 0);
+  const savingsGoalTzs = Math.round(savingsGoalUsd * rate);
+  const actualSavedUsd = summary.saving.usd;
+  const actualSavedTzs = summary.saving.tzs;
+  const savingsGoalPct =
+    savingsGoalUsd > 0
+      ? Math.round((actualSavedUsd / savingsGoalUsd) * 1000) / 10
+      : actualSavedUsd > 0
+      ? 100
+      : 0;
+  const remainingSavingsUsd = Math.max(
+    0,
+    Math.round((savingsGoalUsd - actualSavedUsd) * 100) / 100
+  );
+  const remainingSavingsTzs = Math.max(0, Math.round(savingsGoalTzs - actualSavedTzs));
+  const surplusSavingsUsd = Math.max(
+    0,
+    Math.round((actualSavedUsd - savingsGoalUsd) * 100) / 100
+  );
+  const surplusSavingsTzs = Math.max(0, Math.round(actualSavedTzs - savingsGoalTzs));
+  const savingsGoalMet = savingsGoalUsd > 0 && actualSavedUsd >= savingsGoalUsd;
 
   return (
     <div className="space-y-6">
@@ -433,7 +457,111 @@ export const OverviewView: React.FC<OverviewViewProps> = ({
           </div>
 
           <div className="divide-y divide-slate-100 dark:divide-slate-800">
+            {/* Monthly Savings Goal Progress Bar */}
             <div className="py-3.5 first:pt-0">
+              <div className="flex flex-wrap items-baseline justify-between gap-2 text-sm">
+                <span className="font-medium text-slate-800 dark:text-slate-200">
+                  Monthly Savings Goal
+                </span>
+                <div className="flex items-center gap-2 font-mono tabular-nums">
+                  {savingsGoalUsd > 0 ? (
+                    <>
+                      <span className="text-xs text-slate-600 dark:text-slate-300 font-semibold">
+                        {displayMode === 'TZS'
+                          ? `${formatTZS(actualSavedTzs)} / ${formatTZS(savingsGoalTzs)}`
+                          : `${formatUSD(actualSavedUsd)} / ${formatUSD(savingsGoalUsd)}`}
+                      </span>
+                      <span
+                        className={`inline-flex items-center gap-1 text-xs font-bold ${
+                          savingsGoalMet
+                            ? 'text-emerald-700 dark:text-emerald-400'
+                            : 'text-slate-900 dark:text-slate-100'
+                        }`}
+                      >
+                        {savingsGoalMet && <CheckCircle2 className="w-3.5 h-3.5 shrink-0" />}
+                        {savingsGoalPct}%
+                      </span>
+                    </>
+                  ) : (
+                    <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">
+                      No goal set
+                    </span>
+                  )}
+                </div>
+              </div>
+
+              {displayMode === 'BOTH' && savingsGoalUsd > 0 && (
+                <div className="text-[11px] font-mono tabular-nums text-slate-500 dark:text-slate-400 text-right mt-0.5">
+                  {formatTZS(actualSavedTzs)} / {formatTZS(savingsGoalTzs)}
+                </div>
+              )}
+
+              <div
+                className="w-full h-2.5 bg-slate-100 dark:bg-slate-800 rounded-full mt-2 overflow-hidden"
+                role="progressbar"
+                aria-label="Monthly cumulative savings goal progress"
+                aria-valuenow={Math.min(100, Math.max(0, Math.round(savingsGoalPct)))}
+                aria-valuemin={0}
+                aria-valuemax={100}
+              >
+                <div
+                  className={`h-full rounded-full transition-all duration-300 ${
+                    savingsGoalMet
+                      ? 'bg-emerald-600 dark:bg-emerald-500'
+                      : savingsGoalPct >= 50
+                      ? 'bg-blue-600 dark:bg-blue-500'
+                      : 'bg-amber-500 dark:bg-amber-400'
+                  }`}
+                  style={{ width: `${Math.min(100, Math.max(0, savingsGoalPct))}%` }}
+                />
+              </div>
+
+              <div className="mt-1.5 flex flex-wrap items-center justify-between gap-2 text-xs text-slate-500 dark:text-slate-400">
+                <span className="tabular-nums">
+                  {savingsGoalUsd <= 0 ? (
+                    'Configure a monthly savings target in Settings to track progress.'
+                  ) : savingsGoalMet ? (
+                    <span className="text-emerald-700 dark:text-emerald-400 font-medium">
+                      Goal reached
+                      {surplusSavingsUsd > 0
+                        ? ` (+${
+                            displayMode === 'TZS'
+                              ? formatTZS(surplusSavingsTzs)
+                              : formatUSD(surplusSavingsUsd)
+                          } above target)`
+                        : ''}
+                    </span>
+                  ) : (
+                    <>
+                      {displayMode === 'TZS'
+                        ? formatTZS(remainingSavingsTzs)
+                        : formatUSD(remainingSavingsUsd)}{' '}
+                      left to reach {getMonthLabel(monthKey)} target
+                    </>
+                  )}
+                </span>
+                <div className="flex items-center gap-2.5 shrink-0">
+                  {remainingSavingsUsd > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => onOpenNewEntry('saving', remainingSavingsUsd)}
+                      className="text-emerald-700 dark:text-emerald-400 font-semibold hover:underline cursor-pointer whitespace-nowrap"
+                    >
+                      + Log Savings
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => onNavigate('settings')}
+                    className="text-slate-600 dark:text-slate-300 font-medium hover:underline cursor-pointer whitespace-nowrap"
+                  >
+                    Edit Goal
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <div className="py-3.5">
               <div className="flex items-center justify-between text-sm">
                 <span className="font-medium text-slate-800 dark:text-slate-200">Savings &amp; Reserve Rate</span>
                 <span className="font-mono tabular-nums font-semibold text-slate-900 dark:text-slate-100">

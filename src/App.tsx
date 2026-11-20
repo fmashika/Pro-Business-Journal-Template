@@ -31,8 +31,10 @@ import {
   Sparkles,
   Sun,
   Target,
+  TrendingUp,
   X,
 } from 'lucide-react';
+import { AnnualTrendsView } from './components/AnnualTrendsView';
 import { BudgetModal } from './components/BudgetModal';
 import { BudgetingView } from './components/BudgetingView';
 import { DailyJournalView } from './components/DailyJournalView';
@@ -47,6 +49,7 @@ import { SignInGate } from './components/SignInGate';
 import { StewardshipView } from './components/StewardshipView';
 import { StoryImportModal } from './components/StoryImportModal';
 import {
+  computeAnnualTrends,
   computeDailyCashFlowSeries,
   computeDayOfWeekPatterns,
   computeMonthlyBudgetReport,
@@ -77,12 +80,20 @@ import {
   UserPreferences,
 } from './types/finance';
 
-type NavTab = 'overview' | 'journal' | 'budgeting' | 'stewardship' | 'reserves' | 'settings';
+type NavTab =
+  | 'overview'
+  | 'journal'
+  | 'budgeting'
+  | 'annual'
+  | 'stewardship'
+  | 'reserves'
+  | 'settings';
 
 const NAV_ITEMS: { key: NavTab; label: string; icon: React.FC<{ className?: string }> }[] = [
   { key: 'overview', label: 'Overview', icon: LayoutDashboard },
   { key: 'journal', label: 'Daily Journal', icon: BookOpen },
   { key: 'budgeting', label: 'Budgeting', icon: Target },
+  { key: 'annual', label: 'Annual Trends', icon: TrendingUp },
   { key: 'stewardship', label: 'Tithe & Offering', icon: HeartHandshake },
   { key: 'reserves', label: 'Reserves & Debt', icon: ShieldCheck },
   { key: 'settings', label: 'Settings', icon: Settings },
@@ -129,8 +140,10 @@ function MainWorkspace() {
   };
 
   const todayStr = getTodayDateString();
+  const currentCalendarYear = Number(todayStr.slice(0, 4));
   const [activeTab, setActiveTab] = useState<NavTab>('overview');
   const [monthKey, setMonthKey] = useState<string>(todayStr.slice(0, 7));
+  const [annualYear, setAnnualYear] = useState<number>(currentCalendarYear);
 
   const [preferences, setPreferences] = useState<UserPreferences>({
     userId: '',
@@ -387,6 +400,22 @@ function MainWorkspace() {
       ),
     [entries]
   );
+
+  const annualTrends = useMemo(
+    () => computeAnnualTrends(entries, annualYear),
+    [entries, annualYear]
+  );
+
+  const availableAnnualYears = useMemo(() => {
+    const years = new Set<number>([currentCalendarYear]);
+    for (const e of entries) {
+      const y = Number((e.monthKey || e.date).slice(0, 4));
+      if (Number.isInteger(y) && y > 1990 && y < 2100) {
+        years.add(y);
+      }
+    }
+    return Array.from(years).sort((a, b) => a - b);
+  }, [entries, currentCalendarYear]);
 
   const openNewEntry = (
     typePreset?: EntryType,
@@ -1282,6 +1311,22 @@ function MainWorkspace() {
                   onLogSpendingForCategory={(category) =>
                     openNewEntry('spending', undefined, undefined, undefined, category)
                   }
+                />
+              )}
+
+              {activeTab === 'annual' && (
+                <AnnualTrendsView
+                  year={annualYear}
+                  currentCalendarYear={currentCalendarYear}
+                  currentMonthKey={todayStr.slice(0, 7)}
+                  availableYears={availableAnnualYears}
+                  onYearChange={setAnnualYear}
+                  report={annualTrends}
+                  overall={overall}
+                  preferences={preferences}
+                  displayMode={displayMode}
+                  theme={theme}
+                  onOpenNewEntry={(t) => openNewEntry(t)}
                 />
               )}
 
